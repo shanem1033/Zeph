@@ -76,6 +76,17 @@
 > for the project.
 
 
+
+
+#### Student 1
+
+> *Student 1 should complete this section.*
+
+#### Student 2
+
+> *Student 2 should complete this section.*
+
+
 ### Risk Register
 
 > You are to complete a risk register to demonstrate how you will account for the potential risks (i.e. something going wrong) when youa re working on your proiject. 
@@ -90,14 +101,6 @@
 |             |            |          |            |
 |             |            |          |            |
 |             |            |          |            |
-
-#### Student 1
-
-> *Student 1 should complete this section.*
-
-#### Student 2
-
-> *Student 2 should complete this section.*
 
 ## Example
 
