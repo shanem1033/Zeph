@@ -209,13 +209,10 @@ We will need to learn and implement:
 ### Breakdown of work
 
 
-> Clearly identify who will undertake which parts of the project.
->
-> It must be clear from the explanation of this breakdown of work both that each student is responsible for
-> separate, clearly-defined tasks, and that those responsibilities substantially cover all of the work required
-> for the project.
+Sean will focus on the blockchain and smart contract development aspect of the project. This includes designing and implementing the smart contracts that handle travel insurance policies, claim conditions, and automated payouts. They will also integrate the contracts with oracles to retrieve real-time data, such as flight delays or cancellations. In addition, Student 1 will be responsible for testing and deploying the contracts on a blockchain test network and ensuring that all transactions are secure, transparent, and efficient.
 
 
+Shane will concentrate on the frontend and backend development, building the user interface and managing off-chain operations. This involves developing a web-based platform that allows users to purchase insurance policies, connect their wallets (e.g., via MetaMask), and track claim statuses. They will also handle API integration for flight and travel data, as well as set up any necessary backend services or databases. Student 2 will ensure smooth communication between the UI, the blockchain contracts, and external data sources.
 
 
 ### Risk Register
@@ -245,14 +242,12 @@ We will need to learn and implement:
 
 #### Student 1
 
-
-Student 1 will focus on the blockchain and smart contract development aspect of the project. This includes designing and implementing the smart contracts that handle travel insurance policies, claim conditions, and automated payouts. They will also integrate the contracts with oracles to retrieve real-time data, such as flight delays or cancellations. In addition, Student 1 will be responsible for testing and deploying the contracts on a blockchain test network and ensuring that all transactions are secure, transparent, and efficient.
+I am excited to work on the blockchain side of the project, developing and testing smart contracts that automate travel insurance policies and payouts using real-time data.
 
 
 #### Student 2
 
-
-Student 2 will concentrate on the frontend and backend development, building the user interface and managing off-chain operations. This involves developing a web-based platform that allows users to purchase insurance policies, connect their wallets (e.g., via MetaMask), and track claim statuses. They will also handle API integration for flight and travel data, as well as set up any necessary backend services or databases. Student 2 will ensure smooth communication between the UI, the blockchain contracts, and external data sources.
+I am looking forward to building the frontend and backend of the system, creating an intuitive interface for users and integrating APIs to connect real-world travel data with the blockchain.
 
 
 
