@@ -89,11 +89,11 @@
 
 ### Risk Register
 
-> You are to complete a risk register to demonstrate how you will account for the potential risks (i.e. something going wrong) when youa re working on your proiject. 
+> You are to complete a risk register to demonstrate how you will account for the potential risks (i.e. something going wrong) when you are working on your project. 
 > The purpose of a risk register is to identify potential issues beforehand and plan mitigation strategies to ensure the success of the project. 
-> The reisks are different for each project by some examples include 
+> The risks are different for each project by some examples include 
 
-> if you are using physical components (e..g sensors), what happens if they never arrive, or if they break, or if they are not suitable?
+> if you are using physical components (e.g. sensors), what happens if they never arrive, or if they break, or if they are not suitable?
 > if you are creating an AI/ML method , what happens if there is no suitable training data, or if the model performs poorly after training? 
 
 | Description | Likelyhood | Severity | Mitigation |
