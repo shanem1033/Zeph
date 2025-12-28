@@ -1,0 +1,246 @@
+{
+	"compiler": {
+		"version": "0.8.31+commit.fd3a2265"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [],
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"internalType": "string",
+						"name": "flightId",
+						"type": "string"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "traveler",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					}
+				],
+				"name": "CompensationPaid",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"internalType": "string",
+						"name": "flightId",
+						"type": "string"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "traveler",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "escrowAmount",
+						"type": "uint256"
+					}
+				],
+				"name": "FlightRegistered",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": false,
+						"internalType": "string",
+						"name": "flightId",
+						"type": "string"
+					},
+					{
+						"indexed": false,
+						"internalType": "bool",
+						"name": "delayed",
+						"type": "bool"
+					}
+				],
+				"name": "FlightStatusUpdated",
+				"type": "event"
+			},
+			{
+				"inputs": [],
+				"name": "admin",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "bytes32",
+						"name": "",
+						"type": "bytes32"
+					},
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"name": "claims",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "escrowAmount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "registered",
+						"type": "bool"
+					},
+					{
+						"internalType": "bool",
+						"name": "compensated",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "bytes32",
+						"name": "",
+						"type": "bytes32"
+					}
+				],
+				"name": "flightDelayed",
+				"outputs": [
+					{
+						"internalType": "bool",
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "flightId",
+						"type": "string"
+					}
+				],
+				"name": "registerFlight",
+				"outputs": [],
+				"stateMutability": "payable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "flightId",
+						"type": "string"
+					}
+				],
+				"name": "requestCompensation",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "flightId",
+						"type": "string"
+					},
+					{
+						"internalType": "bool",
+						"name": "delayed",
+						"type": "bool"
+					}
+				],
+				"name": "setFlightDelayed",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"stateMutability": "payable",
+				"type": "receive"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"title": "SimpleFlightCompensation (MVP)",
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {
+				"registerFlight(string)": {
+					"notice": "Traveler registers a flight (demo uses escrow to fund contract logic)"
+				},
+				"requestCompensation(string)": {
+					"notice": "Traveler requests compensation if the flight is marked delayed"
+				},
+				"setFlightDelayed(string,bool)": {
+					"notice": "Admin updates flight status (simulates external flight data / verification)"
+				}
+			},
+			"notice": "Minimal prototype: users register a flight, an admin marks it delayed, and eligible users request compensation.",
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"Zeph.sol": "SimpleFlightCompensation"
+		},
+		"evmVersion": "london",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"Zeph.sol": {
+			"keccak256": "0xa08fb95f8c5965207f54bde8de087b825f44a53c9d63cc35b481ea1c1bf4ede2",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://512296f27d0f61498cf3e23eb09e5e60edafb68852a7385fb83003d043c7dfb7",
+				"dweb:/ipfs/QmQVKxdW5FwHDRHqHAKZSbTvtTHSJMVxJvqZDsfjhG48FZ"
+			]
+		}
+	},
+	"version": 1
+}
