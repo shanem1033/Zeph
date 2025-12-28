@@ -1,0 +1,13 @@
+# Remix / build artifacts
+.states/
+artifacts/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+
+# Environment variables
+.env
