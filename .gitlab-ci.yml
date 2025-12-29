@@ -1,0 +1,44 @@
+stages:
+  - quality
+  - build
+  - security
+
+# -------- Solidity formatting--------
+solidity_format_check:
+  stage: quality
+  image: python:3.11-slim
+  before_script:
+    - pip install --no-cache-dir pre-commit
+  script:
+    - pre-commit run --all-files
+  rules:
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# -------- Compile contracts using solc container --------
+solidity_compile:
+  stage: build
+  image: ethereum/solc:0.8.20
+  script:
+    - mkdir -p build
+    - solc --version
+    - solc --optimize --bin --abi -o build src/contracts/*.sol
+  artifacts:
+    expire_in: 14 days
+    paths:
+      - build/
+  rules:
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# -------- Basic static analysis (Solhint via container) --------
+solidity_lint:
+  stage: quality
+  image: node:20
+  script:
+    - npm config set registry https://registry.npmjs.org/
+    - npm i -g solhint@3.6.2
+    - solhint "src/contracts/**/*.sol"
+  rules:
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"

@@ -1,13 +1,16 @@
-# Remix / build artifacts
+# Remix state / generated
 .states/
+src/.states/
 artifacts/
+src/artifacts/
 
-# OS files
-.DS_Store
-Thumbs.db
+# Build outputs (CI will generate)
+build/
+src/build/
 
 # Node
 node_modules/
+npm-debug.log*
 
-# Environment variables
+# Env
 .env
