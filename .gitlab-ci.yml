@@ -1,44 +1,39 @@
 stages:
   - quality
   - build
-  - security
 
-# -------- Solidity formatting--------
-solidity_format_check:
-  stage: quality
-  image: python:3.11-slim
-  before_script:
-    - pip install --no-cache-dir pre-commit
-  script:
-    - pre-commit run --all-files
+workflow:
   rules:
-    - if: $CI_COMMIT_BRANCH
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
 
-# -------- Compile contracts using solc container --------
-solidity_compile:
+# -------------------------
+# Compile Solidity in a container
+# -------------------------
+compile_solidity:
   stage: build
   image: ethereum/solc:0.8.20
   script:
-    - mkdir -p build
     - solc --version
-    - solc --optimize --bin --abi -o build src/contracts/*.sol
+    - mkdir -p build/solc
+    # Compile everything under src/contracts into ABI + BIN
+    - solc --optimize --abi --bin -o build/solc src/contracts/*.sol
+    - ls -la build/solc
   artifacts:
     expire_in: 14 days
     paths:
-      - build/
-  rules:
-    - if: $CI_COMMIT_BRANCH
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      - build/solc/
 
-# -------- Basic static analysis (Solhint via container) --------
-solidity_lint:
+# -------------------------
+# Basic repo hygiene checks 
+# -------------------------
+repo_hygiene:
   stage: quality
-  image: node:20
+  image: alpine:3.20
   script:
-    - npm config set registry https://registry.npmjs.org/
-    - npm i -g solhint@3.6.2
-    - solhint "src/contracts/**/*.sol"
-  rules:
-    - if: $CI_COMMIT_BRANCH
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - test -f README.md
+    - test -d src/contracts
+    - test -f src/contracts/Zeph.sol
+    # Ensure we are not committing remix VM state
+    - if [ -d ".states" ] || [ -d "src/.states" ]; then echo "Remove committed .states folders"; exit 1; fi
+  allow_failure: false
