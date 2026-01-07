@@ -17,7 +17,8 @@ compile_solidity:
     - node --version
     - npm --version
   script:
-    - npm install --no-audit --no-fund --legacy-peer-deps
+    # Install minimal Hardhat tooling only to avoid large dependency tree
+    - npm install --no-audit --no-fund --legacy-peer-deps --no-save hardhat@^3.1.0 @nomicfoundation/hardhat-toolbox@^6.1.0
     - npx hardhat compile
     - mkdir -p build/solc
     # Copy ABIs and bytecode produced by Hardhat to build/solc for artifacts
