@@ -12,7 +12,9 @@ workflow:
 # -------------------------
 compile_solidity:
   stage: build
-  image: ethereum/solc:0.8.20
+  image:
+    name: ethereum/solc:0.8.20
+    entrypoint: ["/bin/sh", "-lc"]
   script:
     - solc --version
     - mkdir -p build/solc
