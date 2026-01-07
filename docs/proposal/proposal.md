@@ -215,7 +215,6 @@ Sean will focus on the blockchain and smart contract development aspect of the p
 Shane will concentrate on the frontend and backend development, building the user interface and managing off-chain operations. This involves developing a web-based platform that allows users to purchase insurance policies, connect their wallets (e.g., via MetaMask), and track claim statuses. They will also handle API integration for flight and travel data, as well as set up any necessary backend services or databases. Student 2 will ensure smooth communication between the UI, the blockchain contracts, and external data sources.
 
 
-### Risk Register
 
 
 | Description | Likelihood | Severity | Mitigation |
@@ -252,6 +251,23 @@ I am looking forward to building the frontend and backend of the system, creatin
 
 
 
+
+### Risk Register
+
+> You are to complete a risk register to demonstrate how you will account for the potential risks (i.e. something going wrong) when you are working on your project. 
+> The purpose of a risk register is to identify potential issues beforehand and plan mitigation strategies to ensure the success of the project. 
+> The risks are different for each project by some examples include 
+
+> if you are using physical components (e.g. sensors), what happens if they never arrive, or if they break, or if they are not suitable?
+> if you are creating an AI/ML method , what happens if there is no suitable training data, or if the model performs poorly after training? 
+
+| Description | Likelyhood | Severity | Mitigation |
+|-------------|------------|----------|------------|
+|             |            |          |            |
+|             |            |          |            |
+|             |            |          |            |
+
+## Example
 
 
 
