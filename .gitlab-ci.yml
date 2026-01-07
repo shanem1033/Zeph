@@ -12,7 +12,7 @@ workflow:
 # -------------------------
 compile_solidity:
   stage: build
-  image: node:18
+  image: node:22
   before_script:
     - node --version
     - npm --version

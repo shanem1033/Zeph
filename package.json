@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "This is a template for CA400 projects.",
   "main": "index.js",
+  "type": "module",
   "directories": {
     "doc": "docs"
   },
