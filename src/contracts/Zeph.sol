@@ -3,13 +3,15 @@ pragma solidity ^0.8.20;
 
 /// @title SimpleFlightCompensation (MVP)
 /// @notice Minimal prototype: users register a flight, an admin marks it delayed, and eligible users request compensation.
-contract SimpleFlightCompensation {
+contract FlightCompensation {
     address public admin;
+    //string flightID;
+    uint256 constant DELAY_THRESHOLD_MINUTES = 180;   
 
     struct ClaimRecord {
         uint256 escrowAmount; // funds provided up-front for the demo (can be removed in later versions)
-        bool registered;      // user registered this flight
-        bool compensated;     // user already received compensation
+        bool registered;      
+        bool compensated;
     }
 
     // flightId (hashed) -> user -> claim record
@@ -47,8 +49,10 @@ contract SimpleFlightCompensation {
     }
 
     /// @notice Admin updates flight status (simulates external flight data / verification)
-    function setFlightDelayed(string calldata flightId, bool delayed) external onlyAdmin {
+    function setFlightDelayed(string calldata flightId, uint256 delayMinutes) external onlyAdmin {
         bytes32 key = keccak256(abi.encode(flightId));
+        bool delayed = (delayMinutes > DELAY_THRESHOLD_MINUTES);
+    
         flightDelayed[key] = delayed;
         emit FlightStatusUpdated(flightId, delayed);
     }
