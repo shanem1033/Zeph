@@ -13,12 +13,22 @@ workflow:
 compile_solidity:
   stage: build
   image: node:22
+  rules:
+    - changes:
+      - src/contracts/**/*
+      - src/artifacts/**/*
+      - package.json
+      - package-lock.json
+      - hardhat.config.js
+      - hardhat.config.mjs
+      when: on_success
+    - when: never
   before_script:
     - node --version
     - npm --version
   script:
-    # Install minimal Hardhat tooling only to avoid large dependency tree
-    - npm install --no-audit --no-fund --legacy-peer-deps --no-save hardhat@^3.1.0 @nomicfoundation/hardhat-toolbox@^6.1.0
+    # Install dev tooling deterministically (requires committed package-lock.json)
+    - npm ci --no-audit --no-fund --legacy-peer-deps
     - npx hardhat compile
     - mkdir -p build/solc
     # Copy ABIs and bytecode produced by Hardhat to build/solc for artifacts
