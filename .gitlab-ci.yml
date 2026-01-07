@@ -8,19 +8,21 @@ workflow:
     - if: $CI_COMMIT_BRANCH
 
 # -------------------------
-# Compile Solidity in a container
+# Compile Solidity using Node + Hardhat
 # -------------------------
 compile_solidity:
   stage: build
-  image:
-    name: ethereum/solc:0.8.20
-    entrypoint: ["/bin/sh", "-lc"]
+  image: node:18
+  before_script:
+    - node --version
+    - npm --version
   script:
-    - solc --version
+    - npm ci
+    - npx hardhat compile
     - mkdir -p build/solc
-    # Compile everything under src/contracts into ABI + BIN
-    - solc --optimize --abi --bin -o build/solc src/contracts/*.sol
-    - ls -la build/solc
+    # Copy ABIs and bytecode produced by Hardhat to build/solc for artifacts
+    - cp -r src/artifacts/* build/solc/ || true
+    - ls -la build/solc || true
   artifacts:
     expire_in: 14 days
     paths:
