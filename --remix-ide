@@ -1,0 +1,5 @@
+[33m[WARN] latest version of remixd is 0.6.60, you are using 0.6.56[0m
+[33m[WARN] please update using the following command:[0m
+[33m[WARN] yarn global add @remix-project/remixd[0m
+[33m[WARN] You can only connect to remixd from one of the supported origins.[0m
+[31m[ERR] No valid shared folder provided.[0m

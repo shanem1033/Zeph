@@ -3,6 +3,9 @@
 src/.states/
 artifacts/
 src/artifacts/
+typechain/
+cache/
+coverage/
 
 # Build outputs (CI will generate)
 build/
