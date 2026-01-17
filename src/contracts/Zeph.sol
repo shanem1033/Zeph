@@ -1,17 +1,36 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/// @title SimpleFlightCompensation (MVP)
+/// @title Compensation 
 /// @notice Minimal prototype: users register a flight, an admin marks it delayed, and eligible users request compensation.
-contract FlightCompensation {
-    address public admin;
-    //string flightID;
-    uint256 constant DELAY_THRESHOLD_MINUTES = 180;   
+
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+contract Compensation is AccessControl, ReentrancyGuard{
+    bytes32 public constant AIRLINE_ROLE = keccak256("AIRLINE_ROLE");
+    bytes32 public constant ORACLE_ROLE  = keccak256("ORACLE_ROLE");
+
+    uint256 public constant DELAY_THRESHOLD_MINUTES = 180;
 
     struct ClaimRecord {
         uint256 escrowAmount; // funds provided up-front for the demo (can be removed in later versions)
         bool registered;      
-        bool compensated;
+        bool compensated;     
+    }
+
+    enum flightState {
+        Unknown,
+        Registered, 
+        VerifiedDelayed,
+        VerifiedNotDelayed
+    }
+
+    enum claimState {
+        None,
+        Eligible,
+        Paid,
+        Disputed
     }
 
     // flightId (hashed) -> user -> claim record
@@ -24,13 +43,13 @@ contract FlightCompensation {
     event FlightStatusUpdated(string flightId, bool delayed);
     event CompensationPaid(string flightId, address indexed traveler, uint256 amount);
 
-    modifier onlyAdmin() {
-        require(msg.sender == admin, "Only admin");
-        _;
-    }
+    constructor(address airline, address oracle) {
+        // Admin role for managing other roles
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
-    constructor() {
-        admin = msg.sender;
+        // Domain roles
+        _grantRole(AIRLINE_ROLE, airline);
+        _grantRole(ORACLE_ROLE, oracle);
     }
 
     /// @notice Traveler registers a flight (demo uses escrow to fund contract logic)
@@ -49,16 +68,16 @@ contract FlightCompensation {
     }
 
     /// @notice Admin updates flight status (simulates external flight data / verification)
-    function setFlightDelayed(string calldata flightId, uint256 delayMinutes) external onlyAdmin {
+    function setFlightDelayed(string calldata flightId, uint256 delayMinutes) external onlyRole(ORACLE_ROLE) {
         bytes32 key = keccak256(abi.encode(flightId));
-        bool delayed = (delayMinutes > DELAY_THRESHOLD_MINUTES);
-    
+        bool delayed = delayMinutes >= DELAY_THRESHOLD_MINUTES;
+
         flightDelayed[key] = delayed;
         emit FlightStatusUpdated(flightId, delayed);
     }
 
     /// @notice Traveler requests compensation if the flight is marked delayed
-    function requestCompensation(string calldata flightId) external {
+    function requestCompensation(string calldata flightId) external nonReentrant {
         bytes32 key = keccak256(abi.encode(flightId));
         ClaimRecord storage r = claims[key][msg.sender];
 
@@ -76,6 +95,15 @@ contract FlightCompensation {
         require(ok, "Transfer failed");
 
         emit CompensationPaid(flightId, msg.sender, compensation);
+    }
+    
+    function getClaim(string calldata flightId, address traveler)
+    external view
+    returns (uint256 escrowAmount, bool registered, bool compensated, bool delayed)
+    {
+        bytes32 key = keccak256(abi.encode(flightId));
+        ClaimRecord storage r = claims[key][traveler];
+        return (r.escrowAmount, r.registered, r.compensated, flightDelayed[key]);
     }
 
     /// @notice Fund the contract so it can pay compensation (send ETH directly)
