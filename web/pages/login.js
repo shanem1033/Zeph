@@ -42,62 +42,64 @@ export default function Login(){
 
   return (
     <PublicLayout>
-      <main>
-        <h1>Login</h1>
-        {error && <Alert type="error" message={error} onClose={() => setError('')} />}
-        
-        <form onSubmit={submit} className="form" style={{ maxWidth: '400px' }}>
-          <Input
-            label="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter your username"
-            required
-          />
-          <Input
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
-            required
-          />
+      <div className="auth-container">
+        <div className="auth-form-wrapper">
+          <h1>Log In</h1>
+          {error && <Alert type="error" message={error} onClose={() => setError('')} />}
           
-          <div style={{ marginTop: '8px' }}>
-            <label style={{ fontWeight: '500' }}>User Type:</label>
-            <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <input
-                  type="radio"
-                  name="role"
-                  value="passenger"
-                  checked={role === 'passenger'}
-                  onChange={(e) => setRole(e.target.value)}
-                />
-                Passenger
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <input
-                  type="radio"
-                  name="role"
-                  value="airline"
-                  checked={role === 'airline'}
-                  onChange={(e) => setRole(e.target.value)}
-                />
-                Airline
-              </label>
+          <form onSubmit={submit} className="form">
+            <Input
+              label="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter your username"
+              required
+            />
+            <Input
+              label="Password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              required
+            />
+            
+            <div style={{ marginTop: '8px' }}>
+              <label style={{ fontWeight: '500', color: 'var(--text-secondary)' }}>User Type:</label>
+              <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)' }}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value="passenger"
+                    checked={role === 'passenger'}
+                    onChange={(e) => setRole(e.target.value)}
+                  />
+                  Passenger
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)' }}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value="airline"
+                    checked={role === 'airline'}
+                    onChange={(e) => setRole(e.target.value)}
+                  />
+                  Airline
+                </label>
+              </div>
             </div>
-          </div>
 
-          <Button type="submit" variant="primary" style={{ marginTop: '16px' }}>
-            Login
-          </Button>
-        </form>
+            <Button type="submit" variant="primary" style={{ marginTop: '16px', width: '100%' }}>
+              Log In
+            </Button>
+          </form>
 
-        <p style={{ marginTop: '16px' }}>
-          Don't have an account? <Link href="/create-account" style={{ color: '#1976d2' }}>Create one here</Link>
-        </p>
-      </main>
+          <p className="auth-footer">
+            Don't have an account? <Link href="/create-account">Create one here</Link>
+          </p>
+        </div>
+      </div>
     </PublicLayout>
   )
 }

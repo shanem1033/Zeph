@@ -21,18 +21,31 @@ export default function PassengerLayout({ children }) {
   }
 
   return (
-    <div className="container">
+    <>
       <nav className="nav">
-        <Link href="/passenger/dashboard">Dashboard</Link>
-        <Link href="/passenger/register-flight">Register Flight</Link>
-        <Link href="/passenger/my-claims">My Claims</Link>
-        <Link href="/passenger/profile">Profile</Link>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <span>Welcome, {user.username}</span>
-          <a onClick={logout} style={{ cursor: 'pointer' }}>Logout</a>
+        <Link href="/passenger/dashboard" className="nav-brand">
+          Zeph
+        </Link>
+        <div className="nav-links">
+          <Link href="/passenger/dashboard" className={`nav-link ${router.pathname === '/passenger/dashboard' ? 'active' : ''}`}>
+            Dashboard
+          </Link>
+          <Link href="/passenger/register-flight" className={`nav-link ${router.pathname === '/passenger/register-flight' ? 'active' : ''}`}>
+            Register Flight
+          </Link>
+          <Link href="/passenger/my-claims" className={`nav-link ${router.pathname === '/passenger/my-claims' ? 'active' : ''}`}>
+            My Claims
+          </Link>
+          <Link href="/passenger/profile" className={`nav-link ${router.pathname === '/passenger/profile' ? 'active' : ''}`}>
+            Profile
+          </Link>
+        </div>
+        <div className="nav-user">
+          <span className="nav-username">Welcome, {user.username}</span>
+          <button onClick={logout} className="nav-logout">Logout</button>
         </div>
       </nav>
       <main>{children}</main>
-    </div>
+    </>
   )
 }
