@@ -4,17 +4,20 @@ import Input from '../../components/ui/Input'
 import Button from '../../components/ui/Button'
 import Alert from '../../components/ui/Alert'
 import Card from '../../components/ui/Card'
+import { registerFlight as registerFlightOnChain } from '../../utils/contract'
 
 export default function RegisterFlight() {
   const [flightId, setFlightId] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [txHash, setTxHash] = useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setSuccess(false)
+    setTxHash('')
     setLoading(true)
 
     try {
@@ -25,11 +28,11 @@ export default function RegisterFlight() {
         return
       }
 
-      // TODO: Connect to smart contract and call registerFlight(flightId)
-      // For now, simulate the transaction
-      await new Promise(resolve => setTimeout(resolve, 2000))
-
+      // Register flight on blockchain
+      const result = await registerFlightOnChain(flightId)
+      
       setSuccess(true)
+      setTxHash(result.transactionHash)
       setFlightId('')
     } catch (err) {
       setError(err.message || 'Failed to register flight')
@@ -47,7 +50,7 @@ export default function RegisterFlight() {
         {success && (
           <Alert 
             type="success" 
-            message="Flight registered successfully! You are now eligible for compensation if your flight is delayed." 
+            message={`Flight registered successfully! ${txHash ? `Transaction: ${txHash.slice(0, 10)}...${txHash.slice(-8)}` : ''}`}
             onClose={() => setSuccess(false)}
           />
         )}
