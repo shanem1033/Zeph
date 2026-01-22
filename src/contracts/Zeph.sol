@@ -39,7 +39,7 @@ contract Compensation is AccessControl, ReentrancyGuard{
     // flightId (hashed) -> delayed?
     mapping(bytes32 => bool) public flightDelayed;
 
-    event FlightRegistered(string flightId, address indexed traveler, uint256 escrowAmount);
+    event FlightRegistered(string flightId, address indexed traveler);
     event FlightStatusUpdated(string flightId, bool delayed);
     event CompensationPaid(string flightId, address indexed traveler, uint256 amount);
 
@@ -53,28 +53,32 @@ contract Compensation is AccessControl, ReentrancyGuard{
     }
 
     /// @notice Traveler registers a flight (demo uses escrow to fund contract logic)
-    function registerFlight(string calldata flightId) external payable {
-        require(msg.value > 0, "Send escrow amount");
+    function registerFlight(string calldata flightId) external  {
         bytes32 key = keccak256(abi.encode(flightId));
 
         ClaimRecord storage r = claims[key][msg.sender];
         require(!r.registered, "Already registered");
-
-        r.escrowAmount = msg.value;
         r.registered = true;
         r.compensated = false;
 
-        emit FlightRegistered(flightId, msg.sender, msg.value);
+        emit FlightRegistered(flightId, msg.sender);
     }
 
-    /// @notice Admin updates flight status (simulates external flight data / verification)
-    function setFlightDelayed(string calldata flightId, uint256 delayMinutes) external onlyRole(ORACLE_ROLE) {
+    event OracleDelayReported(string flightId, uint256 delayMinutes, bool delayed);
+
+    function oracleReportDelay(string calldata flightId, uint256 delayMinutes)
+        external
+        onlyRole(ORACLE_ROLE)
+    {
         bytes32 key = keccak256(abi.encode(flightId));
         bool delayed = delayMinutes >= DELAY_THRESHOLD_MINUTES;
 
         flightDelayed[key] = delayed;
+
+        emit OracleDelayReported(flightId, delayMinutes, delayed);
         emit FlightStatusUpdated(flightId, delayed);
     }
+
 
     /// @notice Traveler requests compensation if the flight is marked delayed
     function requestCompensation(string calldata flightId) external nonReentrant {
