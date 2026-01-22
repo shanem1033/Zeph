@@ -36,45 +36,47 @@ export default function CreateAccount() {
 
   return (
     <PublicLayout>
-      <main>
-        <h1>Create Account</h1>
-        {error && <Alert type="error" message={error} onClose={() => setError('')} />}
-        {success && <Alert type="success" message="Account created successfully! Redirecting to login..." />}
-        
-        <form onSubmit={submit} className="form" style={{ maxWidth: '400px' }}>
-          <Input
-            label="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Choose a username (min 3 characters)"
-            required
-          />
-          <Input
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Choose a password (min 6 characters)"
-            required
-          />
-          <Input
-            label="Confirm Password"
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Re-enter your password"
-            required
-          />
+      <div className="auth-container">
+        <div className="auth-form-wrapper">
+          <h1>Create Account</h1>
+          {error && <Alert type="error" message={error} onClose={() => setError('')} />}
+          {success && <Alert type="success" message="Account created successfully! Redirecting to login..." />}
+          
+          <form onSubmit={submit} className="form">
+            <Input
+              label="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Choose a username (min 3 characters)"
+              required
+            />
+            <Input
+              label="Password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Choose a password (min 6 characters)"
+              required
+            />
+            <Input
+              label="Confirm Password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Re-enter your password"
+              required
+            />
 
-          <Button type="submit" variant="primary" style={{ marginTop: '16px' }}>
-            Create Account
-          </Button>
-        </form>
+            <Button type="submit" variant="primary" style={{ marginTop: '16px', width: '100%' }}>
+              Create Account
+            </Button>
+          </form>
 
-        <p style={{ marginTop: '16px' }}>
-          Already have an account? <Link href="/login" style={{ color: '#1976d2' }}>Login here</Link>
-        </p>
-      </main>
+          <p className="auth-footer">
+            Already have an account? <Link href="/login">Log in here</Link>
+          </p>
+        </div>
+      </div>
     </PublicLayout>
   )
 }
