@@ -2,6 +2,26 @@ import hre from "hardhat";
 import fs from "fs";
 import path from "path";
 
+function upsertEnvVars(filePath, vars) {
+  let content = "";
+  if (fs.existsSync(filePath)) {
+    content = fs.readFileSync(filePath, "utf8");
+  }
+
+  for (const [key, value] of Object.entries(vars)) {
+    const line = `${key}=${value}`;
+    const re = new RegExp(`^${key}=.*$`, "m");
+    if (re.test(content)) {
+      content = content.replace(re, line);
+    } else {
+      if (content.length > 0 && !content.endsWith("\n")) content += "\n";
+      content += line + "\n";
+    }
+  }
+
+  fs.writeFileSync(filePath, content, "utf8");
+}
+
 async function main() {
   console.log(" Starting deployment...\n");
 
@@ -51,6 +71,8 @@ async function main() {
     deployedAt: new Date().toISOString(),
   };
 
+  const network = await hre.ethers.provider.getNetwork();
+
   const deploymentsDir = path.join(process.cwd(), "deployments");
   if (!fs.existsSync(deploymentsDir)) {
     fs.mkdirSync(deploymentsDir, { recursive: true });
@@ -60,6 +82,16 @@ async function main() {
   fs.writeFileSync(deploymentFile, JSON.stringify(deploymentInfo, null, 2));
 
   console.log("Deployment info saved to:", deploymentFile);
+  console.log();
+
+  // Write runtime config for Next.js (gitignored) so the UI always uses the latest deployment
+  const webEnvPath = path.join(process.cwd(), "web", ".env.local");
+  upsertEnvVars(webEnvPath, {
+    NEXT_PUBLIC_CONTRACT_ADDRESS: contractAddress,
+    NEXT_PUBLIC_CHAIN_ID: network.chainId.toString(),
+  });
+
+  console.log("Frontend env written to:", webEnvPath);
   console.log();
 
   // Copy contract ABI to web directory for frontend
