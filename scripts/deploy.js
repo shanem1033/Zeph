@@ -65,7 +65,7 @@ async function main() {
   // Copy contract ABI to web directory for frontend
   const artifactPath = path.join(
     process.cwd(),
-    "src/artifacts/contracts/Zeph.sol/Compensation.json"
+    "src/artifacts/src/contracts/Zeph.sol/Compensation.json"
   );
   
   if (fs.existsSync(artifactPath)) {
