@@ -509,6 +509,18 @@ button {
   background: rgba(255, 255, 255, 0.15);
 }
 
+.hero .btn-secondary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.hero .btn-secondary:hover {
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
 .btn-danger {
   background: var(--error-color);
   color: #fff;

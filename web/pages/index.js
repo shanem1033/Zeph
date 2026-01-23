@@ -21,6 +21,9 @@ export default function Home() {
             <Link href="/login">
               <button className="btn btn-outline btn-lg">Log In</button>
             </Link>
+            <Link href="/book-flight">
+              <button className="btn btn-secondary btn-lg">Book a Flight</button>
+            </Link>
           </div>
         </section>
 
