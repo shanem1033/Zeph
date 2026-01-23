@@ -15,5 +15,13 @@ src/build/
 node_modules/
 npm-debug.log*
 
+# Hardhat / local dev artifacts
+deployments/*.json
+hardhat-node.log
+hardhat-node.pid
+
+# Frontend generated contract artifacts
+web/contracts/
+
 # Env
 .env.states
