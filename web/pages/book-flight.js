@@ -2,318 +2,294 @@ import { useState } from 'react'
 import Link from 'next/link'
 
 export default function BookFlight() {
-  const [formData, setFormData] = useState({
-    departureCity: '',
-    arrivalCity: '',
-    departureDate: '',
-    passengers: '1',
-    cabinClass: 'economy',
-    airline: '',
-    flightNumber: '',
-    email: '',
-    phone: '',
-  })
+    const [formData, setFormData] = useState({
+        departureCity: '',
+        arrivalCity: '',
+        departureDate: '',
+        passengers: '1',
+        cabinClass: 'economy',
+        airline: '',
+        flightNumber: '',
+        email: '',
+        phone: '',
+    })
 
-  const [showQRCode, setShowQRCode] = useState(false)
-  const [bookingReference, setBookingReference] = useState(null)
+    const [showQRCode, setShowQRCode] = useState(false)
+    const [bookingReference, setBookingReference] = useState(null)
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-  }
+    const handleChange = (e) => {
+        const { name, value } = e.target
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }))
+    }
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    // Generate a booking reference (in future, this would come from database)
-    const ref = `ZPH-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
-    setBookingReference(ref)
-    setShowQRCode(true)
-    // TODO: Send booking data to database
-  }
+    const handleSubmit = (e) => {
+        e.preventDefault()
+        // Generate a booking reference (in future, this would come from database)
+        const ref = `ZPH-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+        setBookingReference(ref)
+        setShowQRCode(true)
+        // TODO: Send booking data to database
+    }
 
-  const popularCities = ['London', 'Paris', 'Berlin', 'Rome', 'Madrid', 'Amsterdam', 'Barcelona', 'Vienna']
-  const airlines = ['Ryanair', 'EasyJet', 'Lufthansa', 'Air France', 'Iberia', 'KLM', 'British Airways', 'Swiss International']
+    const popularCities = ['London', 'Paris', 'Berlin', 'Rome', 'Madrid', 'Amsterdam', 'Barcelona', 'Vienna']
+    const airlines = ['Ryanair', 'EasyJet', 'Lufthansa', 'Air France', 'Iberia', 'KLM', 'British Airways', 'Swiss International']
 
-  return (
-    <div className="booking-page">
-      {/* Header */}
-      <div className="booking-header">
-        <div className="booking-header-content">
-          <Link href="/">
-            <button className="back-button">← Back to Zeph</button>
-          </Link>
-          <h1 className="booking-title">✈️ Book Your Flight</h1>
-          <p className="booking-subtitle">Register your flight and get compensation protection</p>
-        </div>
-      </div>
-
-      <div className="booking-container">
-        {!showQRCode ? (
-          <>
-            {/* Search Form */}
-            <div className="booking-form-section">
-              <form onSubmit={handleSubmit} className="booking-form">
-                {/* Trip Type and Passengers */}
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Cabin Class</label>
-                    <select name="cabinClass" value={formData.cabinClass} onChange={handleChange}>
-                      <option value="economy">Economy</option>
-                      <option value="premium">Premium Economy</option>
-                      <option value="business">Business</option>
-                      <option value="first">First</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Passengers</label>
-                    <select name="passengers" value={formData.passengers} onChange={handleChange}>
-                      {[1, 2, 3, 4, 5, 6].map(num => (
-                        <option key={num} value={num}>{num}</option>
-                      ))}
-                    </select>
-                  </div>
+    return (
+        <div className="booking-page">
+            {/* Header */}
+            <div className="booking-header">
+                <div className="booking-header-content">
+                    <Link href="/">
+                        <button className="back-button">← Back to Zeph</button>
+                    </Link>
+                    <h1 className="booking-title"> Book Your Flight</h1>
+                    <p className="booking-subtitle">Book your flight and get a digital ticket with QR code verification</p>
                 </div>
-
-                {/* Route */}
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>From</label>
-                    <input
-                      type="text"
-                      name="departureCity"
-                      placeholder="Departure city"
-                      value={formData.departureCity}
-                      onChange={handleChange}
-                      list="departure-cities"
-                      required
-                    />
-                    <datalist id="departure-cities">
-                      {popularCities.map(city => (
-                        <option key={city} value={city} />
-                      ))}
-                    </datalist>
-                  </div>
-
-                  <div className="swap-button">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const temp = formData.departureCity
-                        setFormData(prev => ({
-                          ...prev,
-                          departureCity: prev.arrivalCity,
-                          arrivalCity: temp
-                        }))
-                      }}
-                      title="Swap cities"
-                    >
-                      ⇄
-                    </button>
-                  </div>
-
-                  <div className="form-group">
-                    <label>To</label>
-                    <input
-                      type="text"
-                      name="arrivalCity"
-                      placeholder="Arrival city"
-                      value={formData.arrivalCity}
-                      onChange={handleChange}
-                      list="arrival-cities"
-                      required
-                    />
-                    <datalist id="arrival-cities">
-                      {popularCities.map(city => (
-                        <option key={city} value={city} />
-                      ))}
-                    </datalist>
-                  </div>
-                </div>
-
-                {/* Date */}
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Departure Date</label>
-                    <input
-                      type="date"
-                      name="departureDate"
-                      value={formData.departureDate}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Flight Details */}
-                <div className="divider">Your Flight Details</div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Airline</label>
-                    <select name="airline" value={formData.airline} onChange={handleChange} required>
-                      <option value="">Select airline</option>
-                      {airlines.map(airline => (
-                        <option key={airline} value={airline}>{airline}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Flight Number</label>
-                    <input
-                      type="text"
-                      name="flightNumber"
-                      placeholder="e.g., FR123"
-                      value={formData.flightNumber}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Contact Information */}
-                <div className="divider">Contact Information</div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Email</label>
-                    <input
-                      type="email"
-                      name="email"
-                      placeholder="your@email.com"
-                      value={formData.email}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Phone</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      placeholder="+353 1 234 5678"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Submit */}
-                <button type="submit" className="submit-button">
-                  Complete Booking
-                </button>
-              </form>
             </div>
 
-            {/* Info Sidebar */}
-            <div className="booking-info">
-              <div className="info-card">
-                <h3>📋 Why Register Your Flight?</h3>
-                <ul>
-                  <li>Automatic compensation if delayed</li>
-                  <li>Transparent blockchain verification</li>
-                  <li>No manual claims process</li>
-                  <li>EU-regulated payouts</li>
-                </ul>
-              </div>
+            <div className="booking-container">
+                {!showQRCode ? (
+                    <>
+                        {/* Search Form */}
+                        <div className="booking-form-section">
+                            <form onSubmit={handleSubmit} className="booking-form">
+                                {/* Trip Type and Passengers */}
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label>Cabin Class</label>
+                                        <select name="cabinClass" value={formData.cabinClass} onChange={handleChange}>
+                                            <option value="economy">Economy</option>
+                                            <option value="premium">Premium Economy</option>
+                                            <option value="business">Business</option>
+                                            <option value="first">First</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Passengers</label>
+                                        <select name="passengers" value={formData.passengers} onChange={handleChange}>
+                                            {[1, 2, 3, 4, 5, 6].map(num => (
+                                                <option key={num} value={num}>{num}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
 
-              <div className="info-card highlight">
-                <h3>✈️ What Happens Next?</h3>
-                <ol>
-                  <li>Complete this booking form</li>
-                  <li>Receive a unique QR code</li>
-                  <li>Scan QR at airport to verify</li>
-                  <li>Automatic compensation if delayed</li>
-                </ol>
-              </div>
+                                {/* Route */}
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label>From</label>
+                                        <select
+                                            name="departureCity"
+                                            value={formData.departureCity}
+                                            onChange={handleChange}
+                                            required
+                                        >
+                                            <option value="">Select city</option>
+                                            <option value="London">London, UK</option>
+                                            <option value="Paris">Paris, France</option>
+                                            <option value="Berlin">Berlin, Germany</option>
+                                            <option value="Rome">Rome, Italy</option>
+                                            <option value="Madrid">Madrid, Spain</option>
+                                            <option value="Amsterdam">Amsterdam, Netherlands</option>
+                                            <option value="Barcelona">Barcelona, Spain</option>
+                                            <option value="Vienna">Vienna, Austria</option>
+                                            <option value="Prague">Prague, Czech Republic</option>
+                                            <option value="Budapest">Budapest, Hungary</option>
+                                        </select>
+                                    </div>
 
-              <div className="info-card">
-                <h3>💰 Compensation Coverage</h3>
-                <ul>
-                  <li>3+ hours: €250</li>
-                  <li>3+ hours + 1500+ km: €400</li>
-                  <li>3+ hours, EU departure: €500</li>
-                </ul>
-              </div>
+                                    <div className="swap-button">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const temp = formData.departureCity
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    departureCity: prev.arrivalCity,
+                                                    arrivalCity: temp
+                                                }))
+                                            }}
+                                            title="Swap cities"
+                                        >
+                                            ⇄
+                                        </button>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>To</label>
+                                        <select
+                                            name="arrivalCity"
+                                            value={formData.arrivalCity}
+                                            onChange={handleChange}
+                                            required
+                                        >
+                                            <option value="">Select city</option>
+                                            <option value="London">London, UK</option>
+                                            <option value="Paris">Paris, France</option>
+                                            <option value="Berlin">Berlin, Germany</option>
+                                            <option value="Rome">Rome, Italy</option>
+                                            <option value="Madrid">Madrid, Spain</option>
+                                            <option value="Amsterdam">Amsterdam, Netherlands</option>
+                                            <option value="Barcelona">Barcelona, Spain</option>
+                                            <option value="Vienna">Vienna, Austria</option>
+                                            <option value="Prague">Prague, Czech Republic</option>
+                                            <option value="Budapest">Budapest, Hungary</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Date and Time */}
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label>Departure Date</label>
+                                        <input
+                                            type="date"
+                                            name="departureDate"
+                                            value={formData.departureDate}
+                                            onChange={handleChange}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Departure Time</label>
+                                        <select name="departureTime" onChange={handleChange}>
+                                            <option value="">Select time</option>
+                                            <option value="08:00">08:00 AM</option>
+                                            <option value="11:00">11:00 AM</option>
+                                            <option value="14:00">02:00 PM</option>
+                                            <option value="17:00">05:00 PM</option>
+                                            <option value="20:00">08:00 PM</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Flight Details */}
+                                <div className="divider">Select airline</div>
+
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label>Airline</label>
+                                        <select name="airline" value={formData.airline} onChange={handleChange} required>
+                                            <option value="">Select airline</option>
+                                            {airlines.map(airline => (
+                                                <option key={airline} value={airline}>{airline}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Contact Information */}
+                                <div className="divider">Contact Information</div>
+
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label>Email</label>
+                                        <input
+                                            type="email"
+                                            name="email"
+                                            placeholder="your@email.com"
+                                            value={formData.email}
+                                            onChange={handleChange}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Phone</label>
+                                        <input
+                                            type="tel"
+                                            name="phone"
+                                            placeholder="+353 1 234 5678"
+                                            value={formData.phone}
+                                            onChange={handleChange}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Submit */}
+                                <button type="submit" className="submit-button">
+                                    Complete Booking
+                                </button>
+                            </form>
+                        </div>
+                    </>
+                ) : (
+                    /* QR Code Display */
+                    <div className="booking-confirmation">
+                        <div className="confirmation-card">
+                            <div className="success-icon">✓</div>
+                            <h2>Booking Confirmed!</h2>
+                            <p className="booking-ref">Reference: <strong>{bookingReference}</strong></p>
+
+                            <div className="qr-code-container">
+                                <div className="qr-placeholder">
+                                    {/* In a real implementation, this would be a QR code generated from the booking reference */}
+                                    <div className="qr-text">
+                                        <p>QR Code</p>
+                                        <p className="small">{bookingReference}</p>
+                                    </div>
+                                </div>
+                                <p className="qr-instruction">Scan this QR code at the airport to verify your flight registration</p>
+                            </div>
+
+                            <div className="booking-summary">
+                                <h3>Booking Summary</h3>
+                                <div className="summary-row">
+                                    <span>Route:</span>
+                                    <strong>{formData.departureCity} → {formData.arrivalCity}</strong>
+                                </div>
+                                <div className="summary-row">
+                                    <span>Date:</span>
+                                    <strong>{new Date(formData.departureDate).toLocaleDateString()}</strong>
+                                </div>
+                                <div className="summary-row">
+                                    <span>Airline:</span>
+                                    <strong>{formData.airline} {formData.flightNumber}</strong>
+                                </div>
+                                <div className="summary-row">
+                                    <span>Passengers:</span>
+                                    <strong>{formData.passengers}</strong>
+                                </div>
+                            </div>
+
+                            <div className="next-steps">
+                                <h3>Next Steps</h3>
+                                <ol>
+                                    <li>Save your booking reference</li>
+                                    <li>Visit the airport with your booking confirmation</li>
+                                    <li>Scan the QR code at airport kiosks</li>
+                                    <li>Your flight is verified in the system</li>
+                                </ol>
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    setShowQRCode(false)
+                                    setFormData({
+                                        departureCity: '',
+                                        arrivalCity: '',
+                                        departureDate: '',
+                                        passengers: '1',
+                                        cabinClass: 'economy',
+                                        airline: '',
+                                        flightNumber: '',
+                                        email: '',
+                                        phone: '',
+                                    })
+                                }}
+                                className="new-booking-button"
+                            >
+                                Book Another Flight
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
-          </>
-        ) : (
-          /* QR Code Display */
-          <div className="booking-confirmation">
-            <div className="confirmation-card">
-              <div className="success-icon">✓</div>
-              <h2>Booking Confirmed!</h2>
-              <p className="booking-ref">Reference: <strong>{bookingReference}</strong></p>
 
-              <div className="qr-code-container">
-                <div className="qr-placeholder">
-                  {/* In a real implementation, this would be a QR code generated from the booking reference */}
-                  <div className="qr-text">
-                    <p>QR Code</p>
-                    <p className="small">{bookingReference}</p>
-                  </div>
-                </div>
-                <p className="qr-instruction">Scan this QR code at the airport to verify your flight registration</p>
-              </div>
-
-              <div className="booking-summary">
-                <h3>Booking Summary</h3>
-                <div className="summary-row">
-                  <span>Route:</span>
-                  <strong>{formData.departureCity} → {formData.arrivalCity}</strong>
-                </div>
-                <div className="summary-row">
-                  <span>Date:</span>
-                  <strong>{new Date(formData.departureDate).toLocaleDateString()}</strong>
-                </div>
-                <div className="summary-row">
-                  <span>Airline:</span>
-                  <strong>{formData.airline} {formData.flightNumber}</strong>
-                </div>
-                <div className="summary-row">
-                  <span>Passengers:</span>
-                  <strong>{formData.passengers}</strong>
-                </div>
-              </div>
-
-              <div className="next-steps">
-                <h3>Next Steps</h3>
-                <ol>
-                  <li>Save your booking reference</li>
-                  <li>Visit the airport with your booking confirmation</li>
-                  <li>Scan the QR code at Zeph verification kiosks</li>
-                  <li>Your flight is now registered for compensation protection</li>
-                </ol>
-              </div>
-
-              <button
-                onClick={() => {
-                  setShowQRCode(false)
-                  setFormData({
-                    departureCity: '',
-                    arrivalCity: '',
-                    departureDate: '',
-                    passengers: '1',
-                    cabinClass: 'economy',
-                    airline: '',
-                    flightNumber: '',
-                    email: '',
-                    phone: '',
-                  })
-                }}
-                className="new-booking-button"
-              >
-                Book Another Flight
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <style jsx>{`
+            <style jsx>{`
         .booking-page {
           min-height: 100vh;
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -378,9 +354,9 @@ export default function BookFlight() {
           max-width: 1200px;
           margin: 0 auto;
           padding: 3rem 2rem;
-          display: grid;
-          grid-template-columns: 1fr 350px;
-          gap: 2rem;
+          display: flex;
+          justify-content: center;
+          width: 100%;
         }
 
         .booking-form-section {
@@ -388,6 +364,8 @@ export default function BookFlight() {
           border-radius: 12px;
           padding: 2rem;
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+          width: 100%;
+          max-width: 600px;
         }
 
         .booking-form {
@@ -491,43 +469,6 @@ export default function BookFlight() {
 
         .submit-button:active {
           transform: translateY(0);
-        }
-
-        .booking-info {
-          display: flex;
-          flex-direction: column;
-          gap: 1.5rem;
-        }
-
-        .info-card {
-          background: rgba(255, 255, 255, 0.95);
-          border-radius: 12px;
-          padding: 1.5rem;
-          color: #333;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        }
-
-        .info-card h3 {
-          margin: 0 0 1rem 0;
-          font-size: 1.1rem;
-          color: #667eea;
-        }
-
-        .info-card ul,
-        .info-card ol {
-          margin: 0;
-          padding-left: 1.5rem;
-        }
-
-        .info-card li {
-          margin-bottom: 0.5rem;
-          color: #555;
-          line-height: 1.5;
-        }
-
-        .info-card.highlight {
-          background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-          border: 2px solid rgba(102, 126, 234, 0.3);
         }
 
         .booking-confirmation {
@@ -693,7 +634,7 @@ export default function BookFlight() {
 
         @media (max-width: 768px) {
           .booking-container {
-            grid-template-columns: 1fr;
+            padding: 2rem 1rem;
           }
 
           .booking-title {
@@ -713,6 +654,6 @@ export default function BookFlight() {
           }
         }
       `}</style>
-    </div>
-  )
+        </div>
+    )
 }
