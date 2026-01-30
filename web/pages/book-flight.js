@@ -6,7 +6,7 @@ export default function BookFlight() {
         departureCity: '',
         arrivalCity: '',
         departureDate: '',
-        passengers: '1',
+        passportNumber: '',
         cabinClass: 'economy',
         airline: '',
         flightNumber: '',
@@ -34,8 +34,8 @@ export default function BookFlight() {
         // TODO: Send booking data to database
     }
 
-    const popularCities = ['London', 'Paris', 'Berlin', 'Rome', 'Madrid', 'Amsterdam', 'Barcelona', 'Vienna']
-    const airlines = ['Ryanair', 'EasyJet', 'Lufthansa', 'Air France', 'Iberia', 'KLM', 'British Airways', 'Swiss International']
+    const popularCities = ['London', 'Paris', 'Berlin', 'Rome', 'Madrid', 'Amsterdam']
+    const airlines = ['Ryanair', 'EasyJet', 'Lufthansa', 'Air France', 'Iberia']
 
     return (
         <div className="booking-page">
@@ -56,7 +56,7 @@ export default function BookFlight() {
                         {/* Search Form */}
                         <div className="booking-form-section">
                             <form onSubmit={handleSubmit} className="booking-form">
-                                {/* Trip Type and Passengers */}
+                                {/* Trip Type and Passenger */}
                                 <div className="form-row">
                                     <div className="form-group">
                                         <label>Cabin Class</label>
@@ -68,12 +68,14 @@ export default function BookFlight() {
                                         </select>
                                     </div>
                                     <div className="form-group">
-                                        <label>Passengers</label>
-                                        <select name="passengers" value={formData.passengers} onChange={handleChange}>
-                                            {[1, 2, 3, 4, 5, 6].map(num => (
-                                                <option key={num} value={num}>{num}</option>
-                                            ))}
-                                        </select>
+                                        <label>Passport Number</label>
+                                        <input
+                                            type="text"
+                                            name="passportNumber"
+                                            value={formData.passportNumber}
+                                            onChange={handleChange}
+                                            required
+                                        />
                                     </div>
                                 </div>
 
@@ -94,10 +96,6 @@ export default function BookFlight() {
                                             <option value="Rome">Rome, Italy</option>
                                             <option value="Madrid">Madrid, Spain</option>
                                             <option value="Amsterdam">Amsterdam, Netherlands</option>
-                                            <option value="Barcelona">Barcelona, Spain</option>
-                                            <option value="Vienna">Vienna, Austria</option>
-                                            <option value="Prague">Prague, Czech Republic</option>
-                                            <option value="Budapest">Budapest, Hungary</option>
                                         </select>
                                     </div>
 
@@ -133,10 +131,6 @@ export default function BookFlight() {
                                             <option value="Rome">Rome, Italy</option>
                                             <option value="Madrid">Madrid, Spain</option>
                                             <option value="Amsterdam">Amsterdam, Netherlands</option>
-                                            <option value="Barcelona">Barcelona, Spain</option>
-                                            <option value="Vienna">Vienna, Austria</option>
-                                            <option value="Prague">Prague, Czech Republic</option>
-                                            <option value="Budapest">Budapest, Hungary</option>
                                         </select>
                                     </div>
                                 </div>
@@ -161,7 +155,6 @@ export default function BookFlight() {
                                             <option value="11:00">11:00 AM</option>
                                             <option value="14:00">02:00 PM</option>
                                             <option value="17:00">05:00 PM</option>
-                                            <option value="20:00">08:00 PM</option>
                                         </select>
                                     </div>
                                 </div>
@@ -250,8 +243,8 @@ export default function BookFlight() {
                                     <strong>{formData.airline} {formData.flightNumber}</strong>
                                 </div>
                                 <div className="summary-row">
-                                    <span>Passengers:</span>
-                                    <strong>{formData.passengers}</strong>
+                                    <span>Passport Number:</span>
+                                    <strong>{formData.passportNumber}</strong>
                                 </div>
                             </div>
 
@@ -272,7 +265,7 @@ export default function BookFlight() {
                                         departureCity: '',
                                         arrivalCity: '',
                                         departureDate: '',
-                                        passengers: '1',
+                                        passportNumber: '',
                                         cabinClass: 'economy',
                                         airline: '',
                                         flightNumber: '',
