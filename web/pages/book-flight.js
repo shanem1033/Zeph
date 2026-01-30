@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
 export default function BookFlight() {
@@ -14,8 +14,33 @@ export default function BookFlight() {
         phone: '',
     })
 
-    const [showQRCode, setShowQRCode] = useState(false)
+  const [isConfirmationOpen, setIsConfirmationOpen] = useState(false)
     const [bookingReference, setBookingReference] = useState(null)
+
+  const closeButtonRef = useRef(null)
+
+  useEffect(() => {
+    if (!isConfirmationOpen) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsConfirmationOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+
+    // Move focus into the modal for basic accessibility
+    setTimeout(() => closeButtonRef.current?.focus(), 0)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [isConfirmationOpen])
 
     const handleChange = (e) => {
         const { name, value } = e.target
@@ -30,11 +55,25 @@ export default function BookFlight() {
         // Generate a booking reference (in future, this would come from database)
         const ref = `ZPH-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
         setBookingReference(ref)
-        setShowQRCode(true)
+      setIsConfirmationOpen(true)
         // TODO: Send booking data to database
     }
 
-    const popularCities = ['London', 'Paris', 'Berlin', 'Rome', 'Madrid', 'Amsterdam']
+    const resetForm = () => {
+      setFormData({
+        departureCity: '',
+        arrivalCity: '',
+        departureDate: '',
+        passportNumber: '',
+        cabinClass: 'economy',
+        airline: '',
+        flightNumber: '',
+        email: '',
+        phone: '',
+      })
+      setBookingReference(null)
+    }
+
     const airlines = ['Ryanair', 'EasyJet', 'Lufthansa', 'Air France', 'Iberia']
 
     return (
@@ -51,11 +90,9 @@ export default function BookFlight() {
             </div>
 
             <div className="booking-container">
-                {!showQRCode ? (
-                    <>
-                        {/* Search Form */}
-                        <div className="booking-form-section">
-                            <form onSubmit={handleSubmit} className="booking-form">
+              {/* Search Form */}
+              <div className="booking-form-section">
+                <form onSubmit={handleSubmit} className="booking-form">
                                 {/* Trip Type and Passenger */}
                                 <div className="form-row">
                                     <div className="form-group">
@@ -202,85 +239,60 @@ export default function BookFlight() {
                                     </div>
                                 </div>
 
-                                {/* Submit */}
-                                <button type="submit" className="submit-button">
-                                    Complete Booking
-                                </button>
-                            </form>
-                        </div>
-                    </>
-                ) : (
-                    /* QR Code Display */
-                    <div className="booking-confirmation">
-                        <div className="confirmation-card">
-                            <div className="success-icon">✓</div>
-                            <h2>Booking Confirmed!</h2>
-                            <p className="booking-ref">Reference: <strong>{bookingReference}</strong></p>
-
-                            <div className="qr-code-container">
-                                <div className="qr-placeholder">
-                                    {/* In a real implementation, this would be a QR code generated from the booking reference */}
-                                    <div className="qr-text">
-                                        <p>QR Code</p>
-                                        <p className="small">{bookingReference}</p>
-                                    </div>
-                                </div>
-                                <p className="qr-instruction">Scan this QR code at the airport to verify your flight registration</p>
-                            </div>
-
-                            <div className="booking-summary">
-                                <h3>Booking Summary</h3>
-                                <div className="summary-row">
-                                    <span>Route:</span>
-                                    <strong>{formData.departureCity} → {formData.arrivalCity}</strong>
-                                </div>
-                                <div className="summary-row">
-                                    <span>Date:</span>
-                                    <strong>{new Date(formData.departureDate).toLocaleDateString()}</strong>
-                                </div>
-                                <div className="summary-row">
-                                    <span>Airline:</span>
-                                    <strong>{formData.airline} {formData.flightNumber}</strong>
-                                </div>
-                                <div className="summary-row">
-                                    <span>Passport Number:</span>
-                                    <strong>{formData.passportNumber}</strong>
-                                </div>
-                            </div>
-
-                            <div className="next-steps">
-                                <h3>Next Steps</h3>
-                                <ol>
-                                    <li>Save your booking reference</li>
-                                    <li>Visit the airport with your booking confirmation</li>
-                                    <li>Scan the QR code at airport kiosks</li>
-                                    <li>Your flight is verified in the system</li>
-                                </ol>
-                            </div>
-
-                            <button
-                                onClick={() => {
-                                    setShowQRCode(false)
-                                    setFormData({
-                                        departureCity: '',
-                                        arrivalCity: '',
-                                        departureDate: '',
-                                        passportNumber: '',
-                                        cabinClass: 'economy',
-                                        airline: '',
-                                        flightNumber: '',
-                                        email: '',
-                                        phone: '',
-                                    })
-                                }}
-                                className="new-booking-button"
-                            >
-                                Book Another Flight
+                            {/* Submit */}
+                            <button type="submit" className="submit-button">
+                              Complete Booking
                             </button>
+                          </form>
                         </div>
-                    </div>
-                )}
             </div>
+
+                      {/* Booking Confirmation Modal */}
+                      {isConfirmationOpen && (
+                        <div
+                          className="booking-modal-overlay"
+                          role="dialog"
+                          aria-modal="true"
+                          aria-labelledby="booking-confirmation-title"
+                          onMouseDown={(e) => {
+                            if (e.target === e.currentTarget) setIsConfirmationOpen(false)
+                          }}
+                        >
+                          <div className="booking-modal-card">
+                            <div className="success-icon">✓</div>
+                            <h2 id="booking-confirmation-title">Booked successfully</h2>
+                            <p className="booking-ref">
+                              Your booking has been created. We’ll add the full details here next.
+                            </p>
+
+                            <div className="booking-ref-box">
+                              <span>Booking reference</span>
+                              <strong>{bookingReference}</strong>
+                            </div>
+
+                            <div className="modal-actions">
+                              <button
+                                ref={closeButtonRef}
+                                type="button"
+                                className="modal-button secondary"
+                                onClick={() => setIsConfirmationOpen(false)}
+                              >
+                                Close
+                              </button>
+                              <button
+                                type="button"
+                                className="modal-button primary"
+                                onClick={() => {
+                                  setIsConfirmationOpen(false)
+                                  resetForm()
+                                }}
+                              >
+                                Book another flight
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
             <style jsx>{`
         .booking-page {
@@ -472,6 +484,107 @@ export default function BookFlight() {
           min-height: 600px;
         }
 
+        .booking-modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(118, 75, 162, 0.45);
+          backdrop-filter: blur(6px);
+          -webkit-backdrop-filter: blur(6px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1.5rem;
+          z-index: 1000;
+        }
+
+        .booking-modal-card {
+          background: #ffffff;
+          color: #333;
+          width: 100%;
+          max-width: 560px;
+          border-radius: 16px;
+          box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+          padding: 2.25rem;
+          text-align: center;
+          animation: modalIn 180ms ease-out;
+        }
+
+        @keyframes modalIn {
+          from {
+            transform: translateY(8px) scale(0.98);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+          }
+        }
+
+        .booking-ref-box {
+          background: #f6f3ff;
+          border: 1px solid rgba(118, 75, 162, 0.22);
+          border-radius: 12px;
+          padding: 1rem;
+          margin: 1.5rem 0 0 0;
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+
+        .booking-ref-box span {
+          font-size: 0.85rem;
+          color: #6a5a85;
+        }
+
+        .booking-ref-box strong {
+          font-size: 1.05rem;
+          letter-spacing: 0.5px;
+          color: #3a2a55;
+          word-break: break-word;
+        }
+
+        .modal-actions {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0.75rem;
+          margin-top: 1.5rem;
+        }
+
+        .modal-button {
+          border-radius: 10px;
+          padding: 0.9rem 1rem;
+          font-weight: 700;
+          cursor: pointer;
+          border: 1px solid transparent;
+          transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .modal-button:active {
+          transform: translateY(0);
+        }
+
+        .modal-button.secondary {
+          background: #ffffff;
+          border-color: rgba(118, 75, 162, 0.3);
+          color: #5a3ea6;
+        }
+
+        .modal-button.secondary:hover {
+          box-shadow: 0 10px 25px rgba(90, 62, 166, 0.15);
+          transform: translateY(-1px);
+        }
+
+        .modal-button.primary {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: #fff;
+          box-shadow: 0 10px 30px rgba(102, 126, 234, 0.35);
+        }
+
+        .modal-button.primary:hover {
+          box-shadow: 0 14px 40px rgba(102, 126, 234, 0.5);
+          transform: translateY(-1px);
+        }
+
         .confirmation-card {
           background: white;
           border-radius: 16px;
@@ -644,6 +757,14 @@ export default function BookFlight() {
 
           .confirmation-card {
             padding: 2rem 1.5rem;
+          }
+
+          .booking-modal-card {
+            padding: 1.75rem 1.25rem;
+          }
+
+          .modal-actions {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>
