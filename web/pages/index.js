@@ -35,8 +35,8 @@ export default function Home() {
               <div className="feature-icon">⚡</div>
               <h3 className="feature-title">Fast Processing</h3>
               <p className="feature-description">
-                No more waiting months for compensation. Airline have 1 week to make a
-                decision on you claim. If they don't respond, you get paid automatically.
+                No more waiting months for compensation. Airline's have 1 week to make a
+                decision on your claim. If they don't respond, you get paid automatically.
               </p>
             </div>
 

@@ -7,7 +7,7 @@ import Card from '../../components/ui/Card'
 import { registerFlight as registerFlightOnChain } from '../../utils/contract'
 
 export default function RegisterFlight() {
-  const [flightId, setFlightId] = useState('')
+  const [bookingRef, setBookingRef] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -22,16 +22,51 @@ export default function RegisterFlight() {
 
     try {
       // Validation
-      if (!flightId) {
-        setError('Please enter a flight ID')
+      if (!bookingRef) {
+        setError('Please enter your booking reference')
         setLoading(false)
         return
       }
 
-      // Register flight on blockchain
-      const result = await registerFlightOnChain(flightId)
+      // 1) Verify booking reference and get the canonical flightId from DB
+      const prepRes = await fetch('/api/registration/prepare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingRef }),
+      })
 
-      // Save to localStorage for My Claims page
+      const prepData = await prepRes.json().catch(() => null)
+      if (!prepRes.ok || !prepData?.ok) {
+        throw new Error(prepData?.error || 'Booking reference could not be verified')
+      }
+
+      const flightId = prepData.flightId
+      if (!flightId) {
+        throw new Error('Missing flightId from server')
+      }
+
+      // 2) Register flight on blockchain
+      const result = await registerFlightOnChain(flightId)
+      setTxHash(result.transactionHash)
+
+      // 3) Mark registration confirmed in DB
+      const completeRes = await fetch('/api/registration/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookingRef,
+          txHash: result.transactionHash,
+          chainId: Number(process.env.NEXT_PUBLIC_CHAIN_ID || 31337),
+          contractAddress: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || null,
+        }),
+      })
+
+      const completeData = await completeRes.json().catch(() => null)
+      if (!completeRes.ok || !completeData?.ok) {
+        throw new Error(completeData?.error || 'Flight registered on-chain, but failed to update database')
+      }
+
+      // Save to localStorage for My Claims page (temporary until DB-backed user/claims exists)
       const registeredFlights = JSON.parse(localStorage.getItem('registeredFlights') || '[]')
       if (!registeredFlights.find(f => f.flightId === flightId)) {
         registeredFlights.push({ id: Date.now(), flightId })
@@ -39,8 +74,7 @@ export default function RegisterFlight() {
       }
 
       setSuccess(true)
-      setTxHash(result.transactionHash)
-      setFlightId('')
+      setBookingRef('')
     } catch (err) {
       setError(err.message || 'Failed to register flight')
     } finally {
@@ -69,12 +103,12 @@ export default function RegisterFlight() {
             </h2>
 
             <Input
-              label="Flight ID"
-              value={flightId}
-              onChange={(e) => setFlightId(e.target.value)}
-              placeholder="e.g., AA1234, BA567, EI101"
+              label="Booking Reference"
+              value={bookingRef}
+              onChange={(e) => setBookingRef(e.target.value)}
+              placeholder="Paste the booking reference from your confirmation"
               required
-              helpText="Enter your complete flight identifier"
+              helpText="We use this to verify your booking before registering it on-chain"
             />
 
             <div style={{

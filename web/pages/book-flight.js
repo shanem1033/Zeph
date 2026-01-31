@@ -16,6 +16,8 @@ export default function BookFlight() {
 
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false)
     const [bookingReference, setBookingReference] = useState(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
 
   const closeButtonRef = useRef(null)
 
@@ -50,13 +52,41 @@ export default function BookFlight() {
         }))
     }
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
-        // Generate a booking reference (in future, this would come from database)
-        const ref = `ZPH-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
-        setBookingReference(ref)
-      setIsConfirmationOpen(true)
-        // TODO: Send booking data to database
+        setIsSubmitting(true)
+        setSubmitError(null)
+
+        try {
+          const res = await fetch('/api/bookings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              departureCity: formData.departureCity,
+              arrivalCity: formData.arrivalCity,
+              departureDate: formData.departureDate,
+              departureTime: formData.departureTime,
+              passportNumber: formData.passportNumber,
+              cabinClass: formData.cabinClass,
+              airline: formData.airline,
+              email: formData.email,
+              phone: formData.phone,
+            }),
+          })
+
+          const data = await res.json().catch(() => null)
+
+          if (!res.ok || !data?.ok) {
+            throw new Error(data?.error || 'Booking failed')
+          }
+
+          setBookingReference(data.bookingRef)
+          setIsConfirmationOpen(true)
+        } catch (err) {
+          setSubmitError(err?.message || 'Booking failed')
+        } finally {
+          setIsSubmitting(false)
+        }
     }
 
     const resetForm = () => {
@@ -241,8 +271,14 @@ export default function BookFlight() {
 
                             {/* Submit */}
                             <button type="submit" className="submit-button">
-                              Complete Booking
+                          {isSubmitting ? 'Booking…' : 'Complete Booking'}
                             </button>
+
+                            {submitError && (
+                              <div className="submit-error" role="alert">
+                                {submitError}
+                              </div>
+                            )}
                           </form>
                         </div>
             </div>
@@ -465,6 +501,16 @@ export default function BookFlight() {
           margin-top: 1rem;
           transition: all 0.3s ease;
           box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-error {
+          margin-top: 0.75rem;
+          padding: 0.85rem 1rem;
+          border-radius: 10px;
+          background: #fff5f5;
+          border: 1px solid rgba(220, 38, 38, 0.25);
+          color: #b91c1c;
+          font-weight: 600;
         }
 
         .submit-button:hover {

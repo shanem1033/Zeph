@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.93.3",
     "ethers": "^5.7.2",
     "next": "13.4.10",
     "react": "18.2.0",
