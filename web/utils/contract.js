@@ -162,6 +162,8 @@ async function ensureCorrectNetwork(provider) {
   const expectedChainId = getExpectedChainId()
   const network = await provider.getNetwork()
 
+  console.log(`Current chain ID: ${network.chainId}, Expected: ${expectedChainId}`)
+
   if (network.chainId === expectedChainId) return
 
   if (typeof window === 'undefined' || typeof window.ethereum === 'undefined') {
@@ -210,8 +212,8 @@ async function ensureHasGasFunds(signer) {
     const expectedChainId = getExpectedChainId()
     throw new Error(
       `Insufficient funds for gas on this network (chainId ${expectedChainId}). ` +
-        `Testnets still require gas paid in test ETH. If you're using Hardhat Local (31337), ` +
-        `switch MetaMask to Localhost and use a funded Hardhat account.`
+      `Testnets still require gas paid in test ETH. If you're using Hardhat Local (31337), ` +
+      `switch MetaMask to Localhost and use a funded Hardhat account.`
     )
   }
 }
@@ -221,8 +223,14 @@ export async function getProvider() {
     throw new Error('MetaMask is not installed. Please install MetaMask to continue.')
   }
 
+  console.log('MetaMask chainId before creating provider:', window.ethereum.chainId)
+
   const provider = new ethers.providers.Web3Provider(window.ethereum)
   await provider.send("eth_requestAccounts", [])
+
+  const network = await provider.getNetwork()
+  console.log('Provider detected network:', network.chainId, network.name)
+
   return provider
 }
 
@@ -277,7 +285,7 @@ export async function registerFlight(flightId) {
         'Insufficient funds to pay gas. Testnets are not gas-free — you need test ETH on the selected network. '
       )
     }
-    
+
     if (error.message.includes('Already registered')) {
       throw new Error('This flight has already been registered')
     }
@@ -311,7 +319,7 @@ export async function requestCompensation(flightId) {
         'Insufficient funds to pay gas. Testnets are not gas-free — you need test ETH on the selected network. '
       )
     }
-    
+
     if (error.message.includes('Flight not registered')) {
       throw new Error('This flight has not been registered')
     }
@@ -332,7 +340,7 @@ export async function getClaimDetails(flightId, address) {
   try {
     const provider = await getProvider()
     const contract = new ethers.Contract(getContractAddress(), CONTRACT_ABI, provider)
-    
+
     const [escrowAmount, registered, compensated, delayed] = await contract.getClaim(flightId, address)
 
     return {

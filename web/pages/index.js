@@ -10,8 +10,8 @@ export default function Home() {
           <h1 className="hero-title">Welcome to Zeph</h1>
           <h2 className="hero-subtitle">Blockchain-Powered Flight Compensation</h2>
           <p className="hero-description">
-            Experience a revolutionary approach to flight delay compensation. 
-            Transparent, automated, and fair. 
+            Experience a revolutionary approach to flight delay compensation.
+            Transparent, automated, and fair.
             Powered by blockchain technology.
           </p>
           <div className="hero-actions">
@@ -44,7 +44,7 @@ export default function Home() {
               <div className="feature-icon">🔒</div>
               <h3 className="feature-title">Blockchain Security</h3>
               <p className="feature-description">
-                Your funds are protected by Ethereum smart contracts. Transparent, 
+                Your funds are protected by Ethereum smart contracts. Transparent,
                 immutable, and secure.
               </p>
             </div>
@@ -53,7 +53,7 @@ export default function Home() {
               <div className="feature-icon">✈️</div>
               <h3 className="feature-title">Automated Verification</h3>
               <p className="feature-description">
-                Flight delay data is verified through oracle services. No manual 
+                Flight delay data is verified through oracle services. No manual
                 claims process required.
               </p>
             </div>
@@ -62,7 +62,7 @@ export default function Home() {
               <div className="feature-icon">⚖️</div>
               <h3 className="feature-title">Fair Compensation</h3>
               <p className="feature-description">
-                Get the compensation you deserve based on transparent, predefined 
+                Get the compensation you deserve based on transparent, predefined
                 rules coded into the smart contract. Which align with EU regulations.
               </p>
             </div>
@@ -71,7 +71,7 @@ export default function Home() {
               <div className="feature-icon">👀</div>
               <h3 className="feature-title">Full Transparency</h3>
               <p className="feature-description">
-                Track your claims in real-time. Every transaction is recorded on 
+                Track your claims in real-time. Every transaction is recorded on
                 the blockchain for complete transparency.
               </p>
             </div>
@@ -103,7 +103,7 @@ export default function Home() {
               <div className="feature-icon">2️⃣</div>
               <h3 className="feature-title">Automatic Monitoring</h3>
               <p className="feature-description">
-                Our oracle system monitors your flight status in real-time 
+                Our oracle system monitors your flight status in real-time
                 for any delays.
               </p>
             </div>
