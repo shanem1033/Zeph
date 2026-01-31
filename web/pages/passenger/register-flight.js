@@ -30,7 +30,14 @@ export default function RegisterFlight() {
 
       // Register flight on blockchain
       const result = await registerFlightOnChain(flightId)
-      
+
+      // Save to localStorage for My Claims page
+      const registeredFlights = JSON.parse(localStorage.getItem('registeredFlights') || '[]')
+      if (!registeredFlights.find(f => f.flightId === flightId)) {
+        registeredFlights.push({ id: Date.now(), flightId })
+        localStorage.setItem('registeredFlights', JSON.stringify(registeredFlights))
+      }
+
       setSuccess(true)
       setTxHash(result.transactionHash)
       setFlightId('')
@@ -48,8 +55,8 @@ export default function RegisterFlight() {
 
         {error && <Alert type="error" message={error} onClose={() => setError('')} />}
         {success && (
-          <Alert 
-            type="success" 
+          <Alert
+            type="success"
             message={`Flight registered successfully! ${txHash ? `Transaction: ${txHash.slice(0, 10)}...${txHash.slice(-8)}` : ''}`}
             onClose={() => setSuccess(false)}
           />
@@ -70,9 +77,9 @@ export default function RegisterFlight() {
               helpText="Enter your complete flight identifier"
             />
 
-            <div style={{ 
-              background: 'var(--bg-tertiary)', 
-              padding: 'var(--space-lg)', 
+            <div style={{
+              background: 'var(--bg-tertiary)',
+              padding: 'var(--space-lg)',
               borderRadius: 'var(--radius-md)',
               marginTop: 'var(--space-lg)',
               border: '1px solid var(--gray-200)'
@@ -80,9 +87,9 @@ export default function RegisterFlight() {
               <h3 style={{ fontSize: '16px', marginBottom: 'var(--space-sm)', color: 'var(--text-primary)' }}>
                 📋 Compensation Details
               </h3>
-              <ul style={{ 
-                margin: 0, 
-                paddingLeft: 'var(--space-lg)', 
+              <ul style={{
+                margin: 0,
+                paddingLeft: 'var(--space-lg)',
                 color: 'var(--text-secondary)',
                 fontSize: '14px',
                 lineHeight: '1.8'
@@ -94,9 +101,9 @@ export default function RegisterFlight() {
               </ul>
             </div>
 
-            <Button 
-              type="submit" 
-              variant="primary" 
+            <Button
+              type="submit"
+              variant="primary"
               disabled={loading}
               style={{ marginTop: 'var(--space-xl)', width: '100%' }}
             >

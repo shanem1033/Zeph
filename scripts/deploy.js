@@ -51,14 +51,22 @@ async function main() {
   // Fund the contract with some ETH for compensation payouts
   const fundAmount = hre.ethers.parseEther("10.0");
   console.log("Funding contract with", hre.ethers.formatEther(fundAmount), "ETH...");
-  
+
   const tx = await deployer.sendTransaction({
     to: contractAddress,
     value: fundAmount,
   });
   await tx.wait();
-  
+
   console.log("Contract funded successfully");
+  console.log();
+
+  // Mark FR123 as delayed for testing
+  console.log("Setting up test flight FR123 with 240 minute delay...");
+  const oracleContract = compensation.connect(oracle);
+  const setDelayTx = await oracleContract.oracleReportDelay("FR123", 240);
+  await setDelayTx.wait();
+  console.log("FR123 marked as delayed (240 minutes)");
   console.log();
 
   // Save deployment info for the frontend
@@ -99,7 +107,7 @@ async function main() {
     process.cwd(),
     "src/artifacts/src/contracts/Zeph.sol/Compensation.json"
   );
-  
+
   if (fs.existsSync(artifactPath)) {
     const webContractsDir = path.join(process.cwd(), "web/contracts");
     if (!fs.existsSync(webContractsDir)) {
@@ -108,7 +116,7 @@ async function main() {
 
     const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
     const abiFile = path.join(webContractsDir, "Compensation.json");
-    
+
     fs.writeFileSync(
       abiFile,
       JSON.stringify({ abi: artifact.abi, address: contractAddress }, null, 2)
