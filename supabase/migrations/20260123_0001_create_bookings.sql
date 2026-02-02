@@ -13,11 +13,11 @@ create table if not exists public.bookings (
   -- Flight identifier used by the smart contract.
   flight_id text not null,
 
-  -- Passenger details (minimal PII for demo).
+  -- Passenger details
   passenger_name text not null,
   passenger_email text null,
 
-  -- Scheduled departure time (optional for delay checks, useful for display/validation).
+  -- Scheduled departure time
   scheduled_departure_at timestamptz not null,
 
   -- Scheduled arrival time (used later to determine if the flight exceeded the delay threshold).

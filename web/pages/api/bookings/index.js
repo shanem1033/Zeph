@@ -40,18 +40,49 @@ export default async function handler(req, res) {
     return badRequest(res, 'Invalid departureDate/departureTime')
   }
 
-  // Placeholder: assume 2h duration until we have real schedules
-  const arrival = new Date(departure.getTime() + 2 * 60 * 60 * 1000)
-
-  // Deterministic flight id for now (later: airline-provided unique flight number)
-  const flightId = `${departureCity}-${arrivalCity}-${departureDate}-${time}`
-
   const supabase = getSupabaseAdmin()
 
+  // Look up the route to get flight code and duration
+  const { data: route, error: routeError } = await supabase
+    .from('routes')
+    .select('flight_code, duration_minutes')
+    .eq('origin', departureCity)
+    .eq('destination', arrivalCity)
+    .single()
+
+  if (routeError || !route) {
+    return badRequest(res, `No route found for ${departureCity} -> ${arrivalCity}`)
+  }
+
+  // Calculate arrival time from route duration
+  const arrival = new Date(departure.getTime() + route.duration_minutes * 60 * 1000)
+
+  // Generate flight ID: e.g. "BA214-2026-02-15"
+  const flightId = `${route.flight_code}-${departureDate}`
+
+  // Create the flight record if it doesn't exist yet (first booking for this flight)
+  const { error: flightError } = await supabase
+    .from('flights')
+    .upsert({
+      flight_id: flightId,
+      flight_code: route.flight_code,
+      origin: departureCity,
+      destination: arrivalCity,
+      scheduled_departure_at: departure.toISOString(),
+      scheduled_arrival_at: arrival.toISOString(),
+    }, { onConflict: 'flight_id', ignoreDuplicates: true })
+
+  if (flightError) {
+    return res.status(500).json({ ok: false, error: `Failed to create flight: ${flightError.message}` })
+  }
+
+  // Create the booking
   const { data, error } = await supabase
     .from('bookings')
     .insert({
       flight_id: flightId,
+      origin: departureCity,
+      destination: arrivalCity,
       passenger_name: null,
       passenger_email: email,
       passport_number: passportNumber,
@@ -59,7 +90,6 @@ export default async function handler(req, res) {
       scheduled_arrival_at: arrival.toISOString(),
       status: 'booked',
       qr_issued_at: new Date().toISOString(),
-      // Extra UI fields are not stored yet; keep them client-side for now
     })
     .select('booking_ref, flight_id')
     .single()
@@ -72,7 +102,6 @@ export default async function handler(req, res) {
     ok: true,
     bookingRef: data.booking_ref,
     flightId: data.flight_id,
-    // echo a tiny bit of context (optional)
     meta: { cabinClass, airline, phone },
   })
 }
