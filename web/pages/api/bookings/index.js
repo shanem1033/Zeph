@@ -57,8 +57,10 @@ export default async function handler(req, res) {
   // Calculate arrival time from route duration
   const arrival = new Date(departure.getTime() + route.duration_minutes * 60 * 1000)
 
-  // Generate flight ID: e.g. "BA214-2026-02-15"
-  const flightId = `${route.flight_code}-${departureDate}`
+  // Generate flight ID: e.g. "BA214-2026-02-15-0800"
+  // Includes time to handle multiple flights on the same day
+  const timeFormatted = time.replace(':', '')
+  const flightId = `${route.flight_code}-${departureDate}-${timeFormatted}`
 
   // Create the flight record if it doesn't exist yet (first booking for this flight)
   const { error: flightError } = await supabase
