@@ -13,7 +13,10 @@ async function main() {
   
   if (!fs.existsSync(deploymentFile)) {
     console.error("❌ Deployment file not found:", deploymentFile);
-    console.error("Please run: npx hardhat run scripts/deploy.js --network", hre.network.name);
+    console.error(
+      "Please run: npx hardhat run src/scripts/deploy.js --network",
+      hre.network.name
+    );
     process.exit(1);
   }
 

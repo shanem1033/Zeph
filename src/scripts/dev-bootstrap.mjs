@@ -66,7 +66,7 @@ async function main() {
   console.log("Deploying contract to localhost...");
   const deploy = spawn(
     "npx",
-    ["hardhat", "run", "scripts/deploy.js", "--network", "localhost"],
+    ["hardhat", "run", "src/scripts/deploy.js", "--network", "localhost"],
     { stdio: "inherit", shell: process.platform === "win32" }
   );
 
@@ -79,7 +79,7 @@ async function main() {
   });
 
   console.log("Starting Next.js UI...");
-  const web = run("npm", ["--prefix", "web", "run", "dev"]);
+  const web = run("npm", ["--prefix", "src/web", "run", "dev"]);
 
   const shutdown = () => {
     if (web && !web.killed) web.kill("SIGINT");

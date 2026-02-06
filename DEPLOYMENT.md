@@ -11,7 +11,7 @@ Leave this running - it will show you 20 test accounts with ETH.
 
 ### 2. Deploy Contract (in a new terminal)
 ```bash
-npx hardhat run scripts/deploy.js --network localhost
+npx hardhat run src/scripts/deploy.js --network localhost
 ```
 
 You'll see output like:
@@ -22,7 +22,7 @@ You'll see output like:
 ### 3. Use the Contract
 The deployment creates two files:
 - `deployments/localhost.json` - Deployment details
-- `web/contracts/Compensation.json` - ABI + address for frontend
+- `src/web/contracts/Compensation.json` - ABI + address for frontend
 
 ## Test Accounts (from `npx hardhat node`)
 
@@ -70,7 +70,7 @@ PRIVATE_KEY=your_private_key_here
 
 3. Deploy:
 ```bash
-npx hardhat run scripts/deploy.js --network sepolia
+npx hardhat run src/scripts/deploy.js --network sepolia
 ```
 
 ## Troubleshooting

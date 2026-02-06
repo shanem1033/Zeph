@@ -5,7 +5,7 @@ This folder contains a minimal Next.js scaffold for the Simple Flight Compensati
 Quick start:
 
 ```bash
-cd web
+cd src/web
 npm install
 npm run dev
 ```
