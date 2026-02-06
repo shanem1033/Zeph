@@ -6,7 +6,7 @@ export function getSupabaseAdmin() {
 
   if (!url || !serviceRoleKey) {
     throw new Error(
-      'Missing Supabase env vars. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in web/.env.local.'
+      'Missing Supabase env vars. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in src/web/.env.local.'
     )
   }
 

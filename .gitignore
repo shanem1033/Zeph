@@ -22,6 +22,11 @@ hardhat-node.pid
 
 # Frontend generated contract artifacts
 web/contracts/
+src/web/contracts/
 
 # Env
 .env.states
+
+# Supabase CLI temp files (created during db push/link)
+/.deps/
+/supabase/

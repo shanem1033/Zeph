@@ -93,7 +93,7 @@ async function main() {
   console.log();
 
   // Write runtime config for Next.js (gitignored) so the UI always uses the latest deployment
-  const webEnvPath = path.join(process.cwd(), "web", ".env.local");
+  const webEnvPath = path.join(process.cwd(), "src", "web", ".env.local");
   upsertEnvVars(webEnvPath, {
     NEXT_PUBLIC_CONTRACT_ADDRESS: contractAddress,
     NEXT_PUBLIC_CHAIN_ID: network.chainId.toString(),
@@ -109,7 +109,7 @@ async function main() {
   );
 
   if (fs.existsSync(artifactPath)) {
-    const webContractsDir = path.join(process.cwd(), "web/contracts");
+    const webContractsDir = path.join(process.cwd(), "src", "web", "contracts");
     if (!fs.existsSync(webContractsDir)) {
       fs.mkdirSync(webContractsDir, { recursive: true });
     }
@@ -128,8 +128,8 @@ async function main() {
 
   console.log("Deployment complete!\n");
   console.log("Next steps:");
-  console.log("1. Start your UI: cd web && npm run dev");
-  console.log("2. The contract address is now available in web/contracts/Compensation.json");
+  console.log("1. Start your UI: cd src/web && npm run dev");
+  console.log("2. The contract address is now available in src/web/contracts/Compensation.json");
   console.log("3. Use the oracle account to mark flights delayed");
   console.log("4. Use any account to register flights and request compensation");
 }
