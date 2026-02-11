@@ -5,33 +5,57 @@ import PublicLayout from '../components/layouts/PublicLayout'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import Alert from '../components/ui/Alert'
-import { validateRegistration } from '../utils/auth'
+import { supabase } from '../utils/supabaseClient'
 
 export default function CreateAccount() {
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [role, setRole] = useState('passenger')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
     setError('')
     setSuccess(false)
 
     // Validate inputs
-    const validation = validateRegistration(username, password, confirmPassword)
-    if (!validation.valid) {
-      setError(validation.error)
+    if (!email || !password || !confirmPassword) {
+      setError('All fields are required')
+      return
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters')
+      return
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
       return
     }
 
-    // TODO: Replace with actual registration logic
+    setLoading(true)
+
+    // Sign up with Supabase Auth
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { role },
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
+      },
+    })
+
+    if (signUpError) {
+      setError(signUpError.message)
+      setLoading(false)
+      return
+    }
+
     setSuccess(true)
-    setTimeout(() => {
-      router.push('/login')
-    }, 2000)
+    setLoading(false)
   }
 
   return (
@@ -40,37 +64,68 @@ export default function CreateAccount() {
         <div className="auth-form-wrapper">
           <h1>Create Account</h1>
           {error && <Alert type="error" message={error} onClose={() => setError('')} />}
-          {success && <Alert type="success" message="Account created successfully! Redirecting to login..." />}
-          
-          <form onSubmit={submit} className="form">
-            <Input
-              label="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Choose a username (min 3 characters)"
-              required
-            />
-            <Input
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Choose a password (min 6 characters)"
-              required
-            />
-            <Input
-              label="Confirm Password"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Re-enter your password"
-              required
-            />
+          {success && (
+            <Alert type="success" message="Check your email for a confirmation link to complete your registration." />
+          )}
 
-            <Button type="submit" variant="primary" style={{ marginTop: '16px', width: '100%' }}>
-              Create Account
-            </Button>
-          </form>
+          {!success && (
+            <form onSubmit={submit} className="form">
+              <Input
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                required
+              />
+              <Input
+                label="Password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Choose a password (min 6 characters)"
+                required
+              />
+              <Input
+                label="Confirm Password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter your password"
+                required
+              />
+
+              <div style={{ marginTop: '8px' }}>
+                <label style={{ fontWeight: '500', color: 'var(--text-secondary)' }}>Account Type:</label>
+                <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)' }}>
+                    <input
+                      type="radio"
+                      name="role"
+                      value="passenger"
+                      checked={role === 'passenger'}
+                      onChange={(e) => setRole(e.target.value)}
+                    />
+                    Passenger
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)' }}>
+                    <input
+                      type="radio"
+                      name="role"
+                      value="airline"
+                      checked={role === 'airline'}
+                      onChange={(e) => setRole(e.target.value)}
+                    />
+                    Airline
+                  </label>
+                </div>
+              </div>
+
+              <Button type="submit" variant="primary" disabled={loading} style={{ marginTop: '16px', width: '100%' }}>
+                {loading ? 'Creating Account...' : 'Create Account'}
+              </Button>
+            </form>
+          )}
 
           <p className="auth-footer">
             Already have an account? <Link href="/login">Log in here</Link>
