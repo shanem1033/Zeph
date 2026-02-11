@@ -81,8 +81,12 @@ async function main() {
   console.log("Starting Next.js UI...");
   const web = run("npm", ["--prefix", "src/web", "run", "dev"]);
 
+  console.log("Starting oracle worker (polling)...");
+  const oracle = run("npm", ["run", "oracle:watch"]);
+
   const shutdown = () => {
     if (web && !web.killed) web.kill("SIGINT");
+    if (oracle && !oracle.killed) oracle.kill("SIGINT");
     if (hardhatProcess && !hardhatProcess.killed) hardhatProcess.kill("SIGINT");
   };
 
