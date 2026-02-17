@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import PublicLayout from '../components/layouts/PublicLayout'
-import { useAuth } from '../context/AuthContext'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import Alert from '../components/ui/Alert'
@@ -16,7 +15,6 @@ export default function Login() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const { login } = useAuth()
 
   const submit = async (e) => {
     e.preventDefault()
@@ -49,9 +47,6 @@ export default function Login() {
       setLoading(false)
       return
     }
-
-    // Use the role selected by the user
-    login(email, password, role)
 
     // Redirect based on role
     if (role === 'airline') {

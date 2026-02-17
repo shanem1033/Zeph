@@ -1,33 +1,19 @@
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/router'
+import { useAuth } from '../context/AuthContext'
 
-export default function Nav(){
-  const [user, setUser] = useState(null)
-  const router = useRouter()
+export default function Nav() {
+  const { user, isAuthenticated, logout } = useAuth()
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    try {
-      const u = JSON.parse(localStorage.getItem('user') || 'null')
-      setUser(u)
-    } catch {
-      setUser(null)
-    }
-  }, [])
-
-  const logout = () => {
-    if (typeof window !== 'undefined') localStorage.removeItem('user')
-    router.push('/login')
-  }
+  // Display the part before @ from the email, or fallback
+  const displayName = user?.email ? user.email.split('@')[0] : ''
 
   return (
     <nav className="nav">
       <Link href="/">Home</Link>
-      {!user && <Link href="/login">Login</Link>}
-      {!user && <Link href="/create-user">Create User</Link>}
-      {user && <span>Welcome {user.username}</span>}
-      {user && <a onClick={logout} style={{marginLeft:12,cursor:'pointer'}}>Logout</a>}
+      {!isAuthenticated && <Link href="/login">Login</Link>}
+      {!isAuthenticated && <Link href="/create-account">Create Account</Link>}
+      {isAuthenticated && <span>Welcome, {displayName}</span>}
+      {isAuthenticated && <a onClick={logout} style={{ marginLeft: 12, cursor: 'pointer' }}>Logout</a>}
     </nav>
   )
 }

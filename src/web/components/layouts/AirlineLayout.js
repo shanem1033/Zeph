@@ -41,7 +41,7 @@ export default function AirlineLayout({ children }) {
           </Link>
         </div>
         <div className="nav-user">
-          <span className="nav-username">Welcome, {user.username}</span>
+          <span className="nav-username">Welcome, {user.email?.split('@')[0]}</span>
           <button onClick={logout} className="nav-logout">Logout</button>
         </div>
       </nav>

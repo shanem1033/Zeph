@@ -9,29 +9,45 @@ export default function ConfirmEmail() {
     const [error, setError] = useState(false)
 
     useEffect(() => {
-        const { token_hash, type, next } = router.query
+        // Supabase v2 puts the token in the URL hash fragment (#access_token=...&type=signup)
+        // The JS client auto-detects this and establishes a session.
+        // We just need to wait for the auth state to update.
 
-        if (!token_hash || !type) return
-
-        async function verify() {
-            const { error } = await supabase.auth.verifyOtp({
-                type,
-                token_hash,
-            })
-
-            if (error) {
-                setError(true)
-                setStatus('Email verification failed. The link may have expired.')
-            } else {
-                setStatus('Email confirmed! Redirecting...')
-                setTimeout(() => {
-                    window.location.href = next || '/login'
-                }, 2000)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            (event, session) => {
+                if (event === 'SIGNED_IN' && session) {
+                    setStatus('Email confirmed! Redirecting...')
+                    const role = session.user?.user_metadata?.role || 'passenger'
+                    setTimeout(() => {
+                        router.push(role === 'airline' ? '/airline/dashboard' : '/passenger/dashboard')
+                    }, 2000)
+                }
             }
-        }
+        )
 
-        verify()
-    }, [router.query])
+        // Also check if there's already a session (in case the event fired before we subscribed)
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+                setStatus('Email confirmed! Redirecting...')
+                const role = session.user?.user_metadata?.role || 'passenger'
+                setTimeout(() => {
+                    router.push(role === 'airline' ? '/airline/dashboard' : '/passenger/dashboard')
+                }, 2000)
+            } else {
+                // Give a few seconds for the hash fragment to be processed
+                setTimeout(() => {
+                    supabase.auth.getSession().then(({ data: { session: s } }) => {
+                        if (!s) {
+                            setError(true)
+                            setStatus('Email verification failed. The link may have expired.')
+                        }
+                    })
+                }, 3000)
+            }
+        })
+
+        return () => subscription.unsubscribe()
+    }, [router])
 
     return (
         <PublicLayout>

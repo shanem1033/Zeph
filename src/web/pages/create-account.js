@@ -8,6 +8,7 @@ import Alert from '../components/ui/Alert'
 import { supabase } from '../utils/supabaseClient'
 
 export default function CreateAccount() {
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -23,7 +24,7 @@ export default function CreateAccount() {
     setSuccess(false)
 
     // Validate inputs
-    if (!email || !password || !confirmPassword) {
+    if (!name || !email || !password || !confirmPassword) {
       setError('All fields are required')
       return
     }
@@ -70,6 +71,14 @@ export default function CreateAccount() {
 
           {!success && (
             <form onSubmit={submit} className="form">
+              <Input
+                label="Name"
+                type="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter your name"
+                required
+              />
               <Input
                 label="Email"
                 type="email"
