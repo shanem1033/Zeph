@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
+import { supabase } from '../utils/supabaseClient'
 
 const AuthContext = createContext()
 
@@ -9,42 +10,45 @@ export function AuthProvider({ children }) {
   const router = useRouter()
 
   useEffect(() => {
-    // Load user from localStorage on mount
-    if (typeof window !== 'undefined') {
-      try {
-        const storedUser = localStorage.getItem('user')
-        if (storedUser) {
-          setUser(JSON.parse(storedUser))
-        }
-      } catch (error) {
-        console.error('Error loading user from localStorage:', error)
+    // Load the current Supabase session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email,
+          role: session.user.user_metadata?.role || 'passenger',
+        })
       }
       setLoading(false)
-    }
+    })
+
+    // Listen for auth state changes (login, logout, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (session?.user) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email,
+            role: session.user.user_metadata?.role || 'passenger',
+          })
+        } else {
+          setUser(null)
+        }
+      }
+    )
+
+    return () => subscription.unsubscribe()
   }, [])
 
-  const login = (username, password, role) => {
-    // TODO: Replace with actual authentication logic
-    const userData = { username, role }
-    setUser(userData)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('user', JSON.stringify(userData))
-    }
-    return userData
-  }
-
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut()
     setUser(null)
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('user')
-    }
     router.push('/login')
   }
 
   const value = {
     user,
     loading,
-    login,
     logout,
     isAuthenticated: !!user,
     isPassenger: user?.role === 'passenger',
