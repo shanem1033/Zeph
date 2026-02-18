@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 /// @title Compensation 
-/// @notice Minimal prototype: users register a flight, an admin marks it delayed, and eligible users request compensation.
+/// @notice Minimal prototype: users register a flight, an oracle reports delay, and the airline records a per-flight accept/reject decision.
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -14,23 +14,13 @@ contract Compensation is AccessControl, ReentrancyGuard{
     uint256 public constant DELAY_THRESHOLD_MINUTES = 180;
 
     struct ClaimRecord {
-        uint256 escrowAmount; // funds provided up-front for the demo (can be removed in later versions)
-        bool registered;      
-        bool compensated;     
+        bool registered;
     }
 
-    enum flightState {
-        Unknown,
-        Registered, 
-        VerifiedDelayed,
-        VerifiedNotDelayed
-    }
-
-    enum claimState {
+    enum FlightDecision {
         None,
-        Eligible,
-        Paid,
-        Disputed
+        Accepted,
+        Rejected
     }
 
     // flightId (hashed) -> user -> claim record
@@ -39,9 +29,15 @@ contract Compensation is AccessControl, ReentrancyGuard{
     // flightId (hashed) -> delayed?
     mapping(bytes32 => bool) public flightDelayed;
 
+    // flightId (hashed) -> airline decision
+    mapping(bytes32 => FlightDecision) public flightDecision;
+
+    // flightId (hashed) -> evidence hash (only meaningful for Rejected)
+    mapping(bytes32 => bytes32) public flightDecisionEvidenceHash;
+
     event FlightRegistered(string flightId, address indexed traveler);
     event FlightStatusUpdated(string flightId, bool delayed);
-    event CompensationPaid(string flightId, address indexed traveler, uint256 amount);
+    event FlightDecisionRecorded(string flightId, FlightDecision decision, bytes32 evidenceHash);
 
     constructor(address airline, address oracle) {
         // Admin role for managing other roles
@@ -59,7 +55,6 @@ contract Compensation is AccessControl, ReentrancyGuard{
         ClaimRecord storage r = claims[key][msg.sender];
         require(!r.registered, "Already registered");
         r.registered = true;
-        r.compensated = false;
 
         emit FlightRegistered(flightId, msg.sender);
     }
@@ -79,37 +74,34 @@ contract Compensation is AccessControl, ReentrancyGuard{
         emit FlightStatusUpdated(flightId, delayed);
     }
 
-
-    /// @notice Traveler requests compensation if the flight is marked delayed
-    function requestCompensation(string calldata flightId) external nonReentrant {
+    function airlineDecideFlight(string calldata flightId, bool accept, bytes32 evidenceHash)
+        external
+        onlyRole(AIRLINE_ROLE)
+        nonReentrant
+    {
         bytes32 key = keccak256(abi.encode(flightId));
-        ClaimRecord storage r = claims[key][msg.sender];
 
-        require(r.registered, "Flight not registered");
-        require(!r.compensated, "Already compensated");
         require(flightDelayed[key], "Flight not delayed");
+        require(flightDecision[key] == FlightDecision.None, "Decision already recorded");
 
-        // Simple demo rule: compensation = 2x escrow amount
-        uint256 compensation = r.escrowAmount * 2;
-        require(address(this).balance >= compensation, "Contract needs more funds");
+        if (!accept) {
+            require(evidenceHash != bytes32(0), "Evidence required");
+        }
 
-        r.compensated = true;
+        FlightDecision decision = accept ? FlightDecision.Accepted : FlightDecision.Rejected;
+        flightDecision[key] = decision;
+        flightDecisionEvidenceHash[key] = evidenceHash;
 
-        (bool ok, ) = msg.sender.call{value: compensation}("");
-        require(ok, "Transfer failed");
-
-        emit CompensationPaid(flightId, msg.sender, compensation);
+        emit FlightDecisionRecorded(flightId, decision, evidenceHash);
     }
-    
+
     function getClaim(string calldata flightId, address traveler)
-    external view
-    returns (uint256 escrowAmount, bool registered, bool compensated, bool delayed)
+        external
+        view
+        returns (bool registered, bool delayed, FlightDecision decision, bytes32 evidenceHash)
     {
         bytes32 key = keccak256(abi.encode(flightId));
         ClaimRecord storage r = claims[key][traveler];
-        return (r.escrowAmount, r.registered, r.compensated, flightDelayed[key]);
+        return (r.registered, flightDelayed[key], flightDecision[key], flightDecisionEvidenceHash[key]);
     }
-
-    /// @notice Fund the contract so it can pay compensation (send ETH directly)
-    receive() external payable {}
 }

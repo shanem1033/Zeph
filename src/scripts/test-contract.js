@@ -28,86 +28,48 @@ async function main() {
   console.log("├─ Contract:", contractAddress);
   console.log("├─ Passenger:", passenger1.address);
   console.log("├─ Oracle:", oracle.address);
+  console.log("├─ Airline:", airline.address);
   console.log("└─ Flight ID: BA249\n");
 
   // Test 1: Register Flight as Passenger
-  console.log("Test 1: Registering flight BA249 with 0.01 ETH escrow...");
-  const escrowAmount = hre.ethers.parseEther("0.01");
-  const registerTx = await Compensation.connect(passenger1).registerFlight("BA249", {
-    value: escrowAmount,
-  });
+  console.log("Test 1: Registering flight BA249...");
+  const registerTx = await Compensation.connect(passenger1).registerFlight("BA249");
   await registerTx.wait();
   console.log("✅ Flight registered!\n");
 
   // Test 2: Check Claim Status Before Delay
-  console.log("Test 2: Checking claim status (before delay marked)...");
+  console.log("Test 2: Checking claim status (before delay reported)...");
   const claimBefore = await Compensation.getClaim("BA249", passenger1.address);
-  console.log("├─ Escrow Amount:", hre.ethers.formatEther(claimBefore[0]), "ETH");
-  console.log("├─ Registered:", claimBefore[1]);
-  console.log("├─ Compensated:", claimBefore[2]);
-  console.log("└─ Flight Delayed:", claimBefore[3], "\n");
+  console.log("├─ Registered:", claimBefore[0]);
+  console.log("├─ Flight Delayed:", claimBefore[1]);
+  console.log("├─ Decision:", claimBefore[2]);
+  console.log("└─ Evidence Hash:", claimBefore[3], "\n");
 
-  // Test 3: Try to Request Compensation (should fail - not delayed yet)
-  console.log("Test 3: Trying to request compensation before delay marked...");
-  try {
-    await Compensation.connect(passenger1).requestCompensation("BA249");
-    console.log("❌ Should have failed but didn't\n");
-  } catch (error) {
-    console.log("✅ Correctly rejected (flight not delayed yet)\n");
-  }
-
-  // Test 4: Oracle Marks Flight Delayed
-  console.log("Test 4: Oracle marking flight as delayed (185 minutes)...");
-  const delayTx = await Compensation.connect(oracle).setFlightDelayed("BA249", 185);
+  // Test 3: Oracle Marks Flight Delayed
+  console.log("Test 3: Oracle reporting delay for BA249 (185 minutes)...");
+  const delayTx = await Compensation.connect(oracle).oracleReportDelay("BA249", 185);
   await delayTx.wait();
   console.log("✅ Flight marked as delayed!\n");
 
   // Test 5: Check Claim Status After Delay
-  console.log("Test 5: Checking claim status (after delay marked)...");
-  const claimAfter = await Compensation.getClaim("BA249", passenger1.address);
-  console.log("├─ Escrow Amount:", hre.ethers.formatEther(claimAfter[0]), "ETH");
-  console.log("├─ Registered:", claimAfter[1]);
-  console.log("├─ Compensated:", claimAfter[2]);
-  console.log("└─ Flight Delayed:", claimAfter[3], "\n");
+  console.log("Test 4: Airline rejecting claim for BA249 (evidence required)...");
+  const evidenceHash = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("weather diversion"));
+  const decideTx = await Compensation.connect(airline).airlineDecideFlight("BA249", false, evidenceHash);
+  await decideTx.wait();
+  console.log("✅ Airline decision recorded!\n");
 
-  // Test 6: Request Compensation
-  console.log("Test 6: Requesting compensation (should receive 2x escrow)...");
-  const balanceBefore = await hre.ethers.provider.getBalance(passenger1.address);
-  
-  const compensationTx = await Compensation.connect(passenger1).requestCompensation("BA249");
-  const receipt = await compensationTx.wait();
-  
-  const balanceAfter = await hre.ethers.provider.getBalance(passenger1.address);
-  const gasUsed = receipt.gasUsed * receipt.gasPrice;
-  const netGain = balanceAfter - balanceBefore + gasUsed;
-  
-  console.log("✅ Compensation paid!");
-  console.log("├─ Received:", hre.ethers.formatEther(netGain), "ETH");
-  console.log("└─ Expected: 0.02 ETH (2x escrow)\n");
-
-  // Test 7: Final Claim Status
-  console.log("Test 7: Final claim status...");
+  console.log("Test 5: Final claim status...");
   const claimFinal = await Compensation.getClaim("BA249", passenger1.address);
-  console.log("├─ Escrow Amount:", hre.ethers.formatEther(claimFinal[0]), "ETH");
-  console.log("├─ Registered:", claimFinal[1]);
-  console.log("├─ Compensated:", claimFinal[2]);
-  console.log("└─ Flight Delayed:", claimFinal[3], "\n");
-
-  // Test 8: Try to Request Compensation Again (should fail)
-  console.log("Test 8: Trying to request compensation again...");
-  try {
-    await Compensation.connect(passenger1).requestCompensation("BA249");
-    console.log("❌ Should have failed but didn't\n");
-  } catch (error) {
-    console.log("✅ Correctly rejected (already compensated)\n");
-  }
+  console.log("├─ Registered:", claimFinal[0]);
+  console.log("├─ Flight Delayed:", claimFinal[1]);
+  console.log("├─ Decision:", claimFinal[2]);
+  console.log("└─ Evidence Hash:", claimFinal[3], "\n");
 
   console.log("All tests passed!\n");
   console.log("Summary:");
-  console.log("✅ Passenger registered flight with escrow");
-  console.log("✅ Oracle marked flight as delayed");
-  console.log("✅ Passenger received 2x compensation");
-  console.log("✅ Duplicate claims prevented");
+  console.log("✅ Passenger registered flight");
+  console.log("✅ Oracle reported delay");
+  console.log("✅ Airline recorded per-flight decision with evidence hash");
 }
 
 main()

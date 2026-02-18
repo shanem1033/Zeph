@@ -6,13 +6,85 @@ export default function MyClaims() {
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState(null)
 
-  useEffect(() => {
-    // Load registered flights from localStorage (temporary until we have proper user accounts)
-    const registeredFlights = localStorage.getItem('registeredFlights')
-    if (registeredFlights) {
-      setFlights(JSON.parse(registeredFlights))
+  async function refreshFromServer(currentFlights) {
+    const refs = (Array.isArray(currentFlights) ? currentFlights : [])
+      .map((f) => f?.bookingRef)
+      .filter(Boolean)
+
+    if (refs.length === 0) return
+
+    const res = await fetch('/api/passenger/claims', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bookingRefs: refs }),
+    })
+
+    const data = await res.json().catch(() => null)
+    if (!res.ok || !data?.ok) {
+      throw new Error(data?.error || 'Failed to refresh claim status')
     }
-    setLoading(false)
+
+    const byRef = new Map((data.claims || []).map((c) => [c.bookingRef, c]))
+    const nextFlights = (Array.isArray(currentFlights) ? currentFlights : []).map((f) => {
+      const fresh = f?.bookingRef ? byRef.get(f.bookingRef) : null
+      if (!fresh) return f
+      return {
+        ...f,
+        flightId: fresh.flightId || f.flightId,
+        claimStatus: fresh.claimStatus || f.claimStatus,
+      }
+    })
+
+    setFlights(nextFlights)
+    localStorage.setItem('registeredFlights', JSON.stringify(nextFlights))
+  }
+
+  useEffect(() => {
+    let mounted = true
+    let intervalId = null
+
+    async function loadAndRefresh() {
+      try {
+        // Load registered flights from localStorage (temporary until we have proper user accounts)
+        const registeredFlightsRaw = localStorage.getItem('registeredFlights')
+        const initialFlights = registeredFlightsRaw ? JSON.parse(registeredFlightsRaw) : []
+        if (!mounted) return
+        setFlights(Array.isArray(initialFlights) ? initialFlights : [])
+
+        // Refresh statuses from DB so accepted/rejected shows up without manual cache clearing.
+        await refreshFromServer(initialFlights)
+
+        // Poll while there are still pending claims (registered/awaiting_decision)
+        const hasPending = (Array.isArray(initialFlights) ? initialFlights : []).some((f) =>
+          ['registered', 'awaiting_decision'].includes(f?.claimStatus)
+        )
+
+        if (hasPending) {
+          intervalId = setInterval(async () => {
+            try {
+              const latestRaw = localStorage.getItem('registeredFlights')
+              const latest = latestRaw ? JSON.parse(latestRaw) : []
+              await refreshFromServer(latest)
+            } catch {
+              // Silent; we don't want to spam alerts while polling.
+            }
+          }, 8000)
+        }
+      } catch (err) {
+        if (!mounted) return
+        setMessage({ type: 'error', text: err.message || 'Failed to load claims' })
+      } finally {
+        if (!mounted) return
+        setLoading(false)
+      }
+    }
+
+    loadAndRefresh()
+
+    return () => {
+      mounted = false
+      if (intervalId) clearInterval(intervalId)
+    }
   }, [])
 
   // Map claim status to display text and style
