@@ -5,7 +5,6 @@ import PublicLayout from '../components/layouts/PublicLayout'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import Alert from '../components/ui/Alert'
-import { supabase } from '../utils/supabaseClient'
 
 export default function CreateAccount() {
   const [name, setName] = useState('')
@@ -39,18 +38,22 @@ export default function CreateAccount() {
 
     setLoading(true)
 
-    // Sign up with Supabase Auth
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { role },
-        emailRedirectTo: `${window.location.origin}/auth/confirm`,
-      },
-    })
+    // Use server-side admin API to create pre-confirmed user (bypasses email rate limits)
+    try {
+      const resp = await fetch('/api/registration/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name, role }),
+      })
+      const json = await resp.json()
 
-    if (signUpError) {
-      setError(signUpError.message)
+      if (!resp.ok) {
+        setError(json.error || 'Sign-up failed')
+        setLoading(false)
+        return
+      }
+    } catch (err) {
+      setError(err.message || 'Network error')
       setLoading(false)
       return
     }
@@ -66,7 +69,7 @@ export default function CreateAccount() {
           <h1>Create Account</h1>
           {error && <Alert type="error" message={error} onClose={() => setError('')} />}
           {success && (
-            <Alert type="success" message="Check your email for a confirmation link to complete your registration." />
+            <Alert type="success" message="Account created successfully! You can now log in." />
           )}
 
           {!success && (
