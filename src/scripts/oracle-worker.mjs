@@ -199,6 +199,17 @@ async function runOnce() {
   const wallet = new ethers.Wallet(oraclePrivateKey, provider)
   const contract = new ethers.Contract(contractAddress, abi, wallet)
 
+  let delayThresholdMinutes = 180
+  try {
+    const threshold = await contract.DELAY_THRESHOLD_MINUTES()
+    const parsed = Number.parseInt(String(threshold), 10)
+    if (!Number.isNaN(parsed) && parsed > 0) delayThresholdMinutes = parsed
+  } catch {
+    // Ignore if contract doesn't expose the constant for some reason.
+  }
+
+  console.log('[oracle] delay threshold (minutes):', delayThresholdMinutes)
+
   const { data: pending, error: pendingError } = await supabase
     .from('flights')
     .select(
@@ -222,6 +233,8 @@ async function runOnce() {
     const flightId = flight.flight_id
     const delayMinutesRaw = Number.parseInt(String(flight.delay_minutes), 10)
     const delayMinutes = Number.isNaN(delayMinutesRaw) ? 0 : Math.max(0, delayMinutesRaw)
+
+    const delayed = delayMinutes >= delayThresholdMinutes
 
     console.log(`[oracle] processing ${flightId} (delay_minutes=${delayMinutes})`) 
 
@@ -249,6 +262,42 @@ async function runOnce() {
       throw new Error(`Supabase update failed for ${flightId}: ${updateError.message}`)
     }
     console.log(`[oracle] marked processed in DB: ${flightId}`)
+
+    // Update claim status for all confirmed bookings on this flight.
+    const targetClaimStatus = delayed ? 'awaiting_decision' : 'landed_on_time'
+
+    const { data: bookingRows, error: bookingsError } = await supabase
+      .from('bookings')
+      .select('booking_ref')
+      .eq('flight_id', flightId)
+
+    if (bookingsError) {
+      throw new Error(`Supabase bookings query failed for ${flightId}: ${bookingsError.message}`)
+    }
+
+    const bookingRefs = (Array.isArray(bookingRows) ? bookingRows : [])
+      .map((b) => b.booking_ref)
+      .filter(Boolean)
+
+    if (bookingRefs.length === 0) {
+      console.log(`[oracle] no bookings found for flight: ${flightId}`)
+      continue
+    }
+
+    const { error: claimsUpdateError } = await supabase
+      .from('registered_flights')
+      .update({ claim_status: targetClaimStatus })
+      .in('booking_ref', bookingRefs)
+      .eq('status', 'confirmed')
+      .eq('claim_status', 'registered')
+
+    if (claimsUpdateError) {
+      throw new Error(
+        `Supabase registered_flights update failed for ${flightId}: ${claimsUpdateError.message}`
+      )
+    }
+
+    console.log(`[oracle] updated claim_status=${targetClaimStatus} for flight: ${flightId}`)
   }
 }
 

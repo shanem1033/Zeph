@@ -1,4 +1,6 @@
 import { spawn } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 import net from "node:net";
 
 const HARDHAT_HOST = "127.0.0.1";
@@ -18,6 +20,26 @@ function run(cmd, args, options = {}) {
   });
 
   return child;
+}
+
+function loadEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) return {};
+
+  const content = fs.readFileSync(filePath, "utf8");
+  const env = {};
+
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const idx = line.indexOf("=");
+    if (idx === -1) continue;
+    const key = line.slice(0, idx).trim();
+    const value = line.slice(idx + 1).trim();
+    if (!key) continue;
+    env[key] = value;
+  }
+
+  return env;
 }
 
 function isPortOpen(host, port, timeoutMs = 500) {
@@ -52,6 +74,11 @@ async function waitForPort(host, port, timeoutMs = 20_000) {
 }
 
 async function main() {
+  // Load Next.js env vars so Hardhat scripts can read values like NEXT_PUBLIC_AIRLINE_ADDRESS.
+  const webEnvPath = path.join(process.cwd(), "src", "web", ".env.local");
+  const webEnv = loadEnvFile(webEnvPath);
+  const childEnv = { ...process.env, ...webEnv };
+
   const alreadyRunning = await isPortOpen(HARDHAT_HOST, HARDHAT_PORT, 500);
 
   let hardhatProcess;
@@ -67,7 +94,7 @@ async function main() {
   const deploy = spawn(
     "npx",
     ["hardhat", "run", "src/scripts/deploy.js", "--network", "localhost"],
-    { stdio: "inherit", shell: process.platform === "win32" }
+    { stdio: "inherit", shell: process.platform === "win32", env: childEnv }
   );
 
   await new Promise((resolve, reject) => {
@@ -79,10 +106,10 @@ async function main() {
   });
 
   console.log("Starting Next.js UI...");
-  const web = run("npm", ["--prefix", "src/web", "run", "dev"]);
+  const web = run("npm", ["--prefix", "src/web", "run", "dev"], { env: childEnv });
 
   console.log("Starting oracle worker (polling)...");
-  const oracle = run("npm", ["run", "oracle:watch"]);
+  const oracle = run("npm", ["run", "oracle:watch"], { env: childEnv });
 
   const shutdown = () => {
     if (web && !web.killed) web.kill("SIGINT");

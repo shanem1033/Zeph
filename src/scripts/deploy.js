@@ -2,6 +2,14 @@ import hre from "hardhat";
 import fs from "fs";
 import path from "path";
 
+function resolveOptionalAddress(value, label) {
+  if (!value) return null;
+  if (!hre.ethers.isAddress(value)) {
+    throw new Error(`${label} is not a valid address: ${value}`);
+  }
+  return hre.ethers.getAddress(value);
+}
+
 function upsertEnvVars(filePath, vars) {
   let content = "";
   if (fs.existsSync(filePath)) {
@@ -28,10 +36,18 @@ async function main() {
   // Get signers (accounts from the network)
   const [deployer, airline, oracle] = await hre.ethers.getSigners();
 
+  // Allow using an external wallet (e.g., MetaMask) as the airline.
+  // This avoids needing to grant AIRLINE_ROLE manually after each redeploy.
+  const airlineFromEnv = resolveOptionalAddress(
+    process.env.AIRLINE_ADDRESS || process.env.NEXT_PUBLIC_AIRLINE_ADDRESS,
+    "AIRLINE_ADDRESS"
+  );
+  const airlineAddress = airlineFromEnv || airline.address;
+
   console.log("Deployment Details:");
   console.log("├─ Network:", hre.network.name);
   console.log("├─ Deployer:", deployer.address);
-  console.log("├─ Airline:", airline.address);
+  console.log("├─ Airline:", airlineAddress);
   console.log("└─ Oracle:", oracle.address);
   console.log();
 
@@ -40,25 +56,12 @@ async function main() {
 
   // Deploy contract with airline and oracle addresses
   console.log("Deploying Compensation contract...");
-  const compensation = await Compensation.deploy(airline.address, oracle.address);
+  const compensation = await Compensation.deploy(airlineAddress, oracle.address);
 
   await compensation.waitForDeployment();
   const contractAddress = await compensation.getAddress();
 
   console.log("Contract deployed to:", contractAddress);
-  console.log();
-
-  // Fund the contract with some ETH for compensation payouts
-  const fundAmount = hre.ethers.parseEther("10.0");
-  console.log("Funding contract with", hre.ethers.formatEther(fundAmount), "ETH...");
-
-  const tx = await deployer.sendTransaction({
-    to: contractAddress,
-    value: fundAmount,
-  });
-  await tx.wait();
-
-  console.log("Contract funded successfully");
   console.log();
 
   // Mark FR123 as delayed for testing
@@ -131,7 +134,8 @@ async function main() {
   console.log("1. Start your UI: cd src/web && npm run dev");
   console.log("2. The contract address is now available in src/web/contracts/Compensation.json");
   console.log("3. Use the oracle account to mark flights delayed");
-  console.log("4. Use any account to register flights and request compensation");
+  console.log("4. Use passenger accounts to register flights");
+  console.log("5. Use the airline account to accept/reject delayed flights (evidence required for rejection)");
 }
 
 main()

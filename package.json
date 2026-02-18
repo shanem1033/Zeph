@@ -12,6 +12,8 @@
     "hh": "hardhat",
     "chain": "hardhat node",
     "deploy:localhost": "hardhat run src/scripts/deploy.js --network localhost",
+    "grant:airline": "hardhat run src/scripts/grant-airline-role.js --network localhost",
+    "oracle:report": "hardhat run src/scripts/oracle-report-delay.js --network localhost",
     "oracle:run": "node src/scripts/oracle-worker.mjs",
     "oracle:watch": "node src/scripts/oracle-worker.mjs --watch --interval-ms 60000",
     "web:dev": "npm --prefix src/web run dev",

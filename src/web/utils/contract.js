@@ -1,4 +1,5 @@
 import { ethers } from 'ethers'
+import Compensation from '../contracts/Compensation.json'
 
 const DEFAULT_CHAIN_ID = 31337
 const DEFAULT_CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
@@ -10,153 +11,14 @@ function getExpectedChainId() {
 }
 
 function getContractAddress() {
-  return process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || DEFAULT_CONTRACT_ADDRESS
+  return (
+    process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ||
+    Compensation?.address ||
+    DEFAULT_CONTRACT_ADDRESS
+  )
 }
 
-// Contract ABI - only the functions we need
-const CONTRACT_ABI = [
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "flightId",
-        "type": "string"
-      }
-    ],
-    "name": "registerFlight",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "flightId",
-        "type": "string"
-      }
-    ],
-    "name": "requestCompensation",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "flightId",
-        "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "delayMinutes",
-        "type": "uint256"
-      }
-    ],
-    "name": "setFlightDelayed",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "claims",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "escrowAmount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bool",
-        "name": "registered",
-        "type": "bool"
-      },
-      {
-        "internalType": "bool",
-        "name": "compensated",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "flightId",
-        "type": "string"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "traveler",
-        "type": "address"
-      }
-    ],
-    "name": "FlightRegistered",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "flightId",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "bool",
-        "name": "delayed",
-        "type": "bool"
-      }
-    ],
-    "name": "FlightStatusUpdated",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "flightId",
-        "type": "string"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "traveler",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "CompensationPaid",
-    "type": "event"
-  }
-]
+const CONTRACT_ABI = Compensation?.abi || []
 
 async function ensureCorrectNetwork(provider) {
   const expectedChainId = getExpectedChainId()
@@ -294,63 +156,82 @@ export async function registerFlight(flightId) {
   }
 }
 
-export async function requestCompensation(flightId) {
+export async function airlineDecideFlight({ flightId, accept, evidenceHash }) {
   try {
     const { signer } = await connectWallet()
     await ensureHasGasFunds(signer)
     const contract = await getContract(signer)
 
-    const tx = await contract.requestCompensation(flightId)
+    // Fail fast with a clearer error if the connected wallet cannot call airline-only methods.
+    const caller = await signer.getAddress()
+    const airlineRole = await contract.AIRLINE_ROLE()
+    let hasAirlineRole = await contract.hasRole(airlineRole, caller)
+
+    // Auto-grant AIRLINE_ROLE via the server-side admin key so the airline
+    // operator never has to run a manual CLI command.
+    if (!hasAirlineRole) {
+      console.log('[contract] Wallet missing AIRLINE_ROLE – requesting auto-grant…')
+      console.log('[contract] contract address:', contract.address)
+      console.log('[contract] caller:', caller)
+      const grantRes = await fetch('/api/airline/grant-role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: caller }),
+      })
+      const grantData = await grantRes.json().catch(() => null)
+      console.log('[contract] grant-role API response:', grantData)
+      if (!grantRes.ok || !grantData?.ok) {
+        throw new Error(
+          grantData?.error ||
+          `Your connected wallet (${caller}) does not have AIRLINE_ROLE and auto-grant failed.`
+        )
+      }
+      console.log('[contract] AIRLINE_ROLE granted successfully, proceeding with transaction.')
+    }
+
+    // Ensure the oracle delay is recorded on-chain for this flight.
+    // After a contract redeploy the DB may show the flight as delayed but the
+    // new contract instance won't have the flightDelayed flag yet.
+    console.log('[contract] Ensuring flight delay is on-chain for', flightId)
+    const ensureRes = await fetch('/api/airline/ensure-delay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ flightId }),
+    })
+    const ensureData = await ensureRes.json().catch(() => null)
+    console.log('[contract] ensure-delay API response:', ensureData)
+    if (!ensureRes.ok || !ensureData?.ok) {
+      throw new Error(
+        ensureData?.error ||
+        `Flight ${flightId} is not marked as delayed on-chain and auto-reporting failed.`
+      )
+    }
+
+    const hash = evidenceHash || ethers.constants.HashZero
+    const tx = await contract.airlineDecideFlight(flightId, Boolean(accept), hash)
     const receipt = await tx.wait()
 
-    return {
-      success: true,
-      transactionHash: receipt.transactionHash
-    }
+    return { success: true, transactionHash: receipt.transactionHash }
   } catch (error) {
-    console.error('Error requesting compensation:', error)
-
+    console.error('Error recording airline decision:', error)
     if (error.code === 'ACTION_REJECTED') {
       throw new Error('Transaction was rejected by user')
     }
 
-    if (error.code === 'INSUFFICIENT_FUNDS' || /insufficient funds/i.test(error.message || '')) {
+    const message = String(error?.message || '')
+    if (/Flight not delayed/i.test(message)) {
       throw new Error(
-        'Insufficient funds to pay gas. Testnets are not gas-free — you need test ETH on the selected network. '
+        'This flight is not marked as delayed on the smart contract. ' +
+        'The oracle may not have processed it yet, or the contract was redeployed. Please try again.'
       )
     }
-
-    if (error.message.includes('Flight not registered')) {
-      throw new Error('This flight has not been registered')
+    if (/AccessControlUnauthorizedAccount/i.test(message) || /UnauthorizedAccount/i.test(message)) {
+      throw new Error(
+        'Your connected wallet does not have AIRLINE_ROLE on this contract. ' +
+          'Either switch MetaMask to the airline account used during deployment, or grant the role to your wallet: ' +
+          '`TARGET_ADDRESS=0xYourWalletAddress npm run grant:airline`'
+      )
     }
-
-    if (error.message.includes('Already compensated')) {
-      throw new Error('Compensation has already been claimed for this flight')
-    }
-
-    if (error.message.includes('Flight not delayed')) {
-      throw new Error('This flight is not marked as delayed')
-    }
-
-    throw new Error(error.message || 'Failed to request compensation')
-  }
-}
-
-export async function getClaimDetails(flightId, address) {
-  try {
-    const provider = await getProvider()
-    const contract = new ethers.Contract(getContractAddress(), CONTRACT_ABI, provider)
-
-    const [escrowAmount, registered, compensated, delayed] = await contract.getClaim(flightId, address)
-
-    return {
-      escrowAmount: ethers.utils.formatEther(escrowAmount),
-      registered,
-      compensated,
-      delayed
-    }
-  } catch (error) {
-    console.error('Error getting claim details:', error)
-    throw error
+    throw new Error(error.message || 'Failed to record airline decision')
   }
 }

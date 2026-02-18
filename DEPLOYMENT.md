@@ -40,7 +40,7 @@ The first 3 accounts are used for:
 registerFlight("BA249", { value: ethers.parseEther("0.01") })
 
 // After oracle marks delayed, request compensation
-requestCompensation("BA249")
+airlineDecideFlight("BA249", false, <evidenceHash>)
 ```
 
 ### As Oracle (Account 2):

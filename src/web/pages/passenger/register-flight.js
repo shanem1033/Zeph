@@ -67,9 +67,15 @@ export default function RegisterFlight() {
       }
 
       // Save to localStorage for My Claims page (temporary until DB-backed user/claims exists)
+      // Store bookingRef so we can refresh claim_status from the DB after airline decisions.
       const registeredFlights = JSON.parse(localStorage.getItem('registeredFlights') || '[]')
-      if (!registeredFlights.find(f => f.flightId === flightId)) {
-        registeredFlights.push({ id: Date.now(), flightId })
+      if (!registeredFlights.find((f) => f.bookingRef === bookingRef)) {
+        registeredFlights.push({
+          id: Date.now(),
+          bookingRef,
+          flightId,
+          claimStatus: 'registered',
+        })
         localStorage.setItem('registeredFlights', JSON.stringify(registeredFlights))
       }
 
@@ -119,7 +125,7 @@ export default function RegisterFlight() {
               border: '1px solid var(--gray-200)'
             }}>
               <h3 style={{ fontSize: '16px', marginBottom: 'var(--space-sm)', color: 'var(--text-primary)' }}>
-                📋 Compensation Details
+                📋 Claim Details
               </h3>
               <ul style={{
                 margin: 0,
@@ -129,9 +135,9 @@ export default function RegisterFlight() {
                 lineHeight: '1.8'
               }}>
                 <li>Eligible for compensation if delayed <strong>180+ minutes</strong></li>
-                <li>Claim processed automatically through smart contract</li>
-                <li>You'll be notified when your flight status is verified</li>
-                <li>Compensation paid instantly to your wallet if accepted by airline</li>
+                <li>Delay is verified via the oracle on-chain</li>
+                <li>If delayed, the airline will accept or reject for the whole flight</li>
+                <li>If rejected, evidence is required</li>
               </ul>
             </div>
 
