@@ -30,10 +30,40 @@ export default async function handler(req, res) {
   try {
     const supabase = getSupabaseAdmin()
 
+    // Require an Authorization header with a Supabase access token. This
+    // endpoint returns only claims belonging to the authenticated user.
+    const authHeader = req.headers?.authorization || req.headers?.Authorization
+    if (!authHeader || typeof authHeader !== 'string' || !authHeader.toLowerCase().startsWith('bearer ')) {
+      return res.status(401).json({ ok: false, error: 'Missing Authorization header' })
+    }
+
+    const token = authHeader.split(' ')[1]
+
+    // Attempt to resolve the user from the token. Some test mocks may not
+    // implement auth.getUser; handle that gracefully.
+    let userEmail = null
+    try {
+      if (supabase.auth && typeof supabase.auth.getUser === 'function') {
+        const { data: userData, error: userErr } = await supabase.auth.getUser(token)
+        if (userErr || !userData?.user) {
+          return res.status(401).json({ ok: false, error: 'Invalid token' })
+        }
+        userEmail = userData.user.email
+      } else {
+        // If the auth helper isn't available, reject the request to be safe.
+        return res.status(401).json({ ok: false, error: 'Auth unavailable' })
+      }
+    } catch (e) {
+      return res.status(401).json({ ok: false, error: 'Invalid token' })
+    }
+
+    // Query registered_flights joined with bookings, and restrict to bookings
+    // where passenger_email matches the authenticated user's email.
     const { data: rows, error } = await supabase
       .from('registered_flights')
-      .select('booking_ref, claim_status, bookings!inner(flight_id)')
+      .select('booking_ref, claim_status, bookings!inner(flight_id, passenger_email)')
       .in('booking_ref', bookingRefs)
+      .eq('bookings.passenger_email', userEmail)
       .limit(500)
 
     if (error) throw error
