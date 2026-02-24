@@ -11,13 +11,13 @@
  */
 import { createMocks as _createMocks } from 'node-mocks-http'
 
-// ── env stubs (must run before any handler imports) ──────────────────────────
+// env stubs (must run before any handler imports)
 process.env.SUPABASE_URL = 'http://localhost:54321'
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key'
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost:54321'
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
 
-// ── Supabase mock ────────────────────────────────────────────────────────────
+// Supabase mock
 
 /**
  * Build an object that mirrors the Supabase JS client interface so API route
@@ -59,7 +59,7 @@ export function getActiveMock() {
   return _currentMock.client
 }
 
-// ── Internal mock implementation ─────────────────────────────────────────────
+// Internal mock implementation
 
 class MockSupabase {
   constructor() {
@@ -71,6 +71,18 @@ class MockSupabase {
         admin: {
           createUser: jest.fn().mockResolvedValue({ data: { user: { id: 'mock-user-id' } }, error: null }),
         },
+        // Server-side helpers used by handlers to validate access tokens.
+        // Tests can pass Authorization: 'Bearer user-a' or 'Bearer user-b' and
+        // this mock will return an email derived from the token string.
+        getUser: jest.fn().mockImplementation((token) => {
+          if (!token) return Promise.resolve({ data: { user: null }, error: { message: 'missing token' } })
+          // token may be like 'user-a' or 'user-b' in tests
+          const t = String(token)
+          let email = 'test@example.com'
+          if (t.includes('user-a') || t === 'user-a') email = 'a@example.com'
+          else if (t.includes('user-b') || t === 'user-b') email = 'b@example.com'
+          return Promise.resolve({ data: { user: { email } }, error: null })
+        }),
       },
     }
   }
@@ -110,6 +122,7 @@ class MockSupabase {
 
     // Chainable query builder that resolves to { data, error }
     const builder = {
+      _filters: [],
       select: jest.fn().mockReturnThis(),
       insert: jest.fn().mockReturnThis(),
       update: jest.fn().mockReturnThis(),
@@ -122,14 +135,17 @@ class MockSupabase {
       limit: jest.fn().mockReturnThis(),
       single: jest.fn().mockImplementation(() => {
         const d = cfg.singleData !== undefined ? cfg.singleData : cfg.data
-        return Promise.resolve({ data: d, error: cfg.error })
+        const filtered = applyFilters(d, builder._filters)
+        return Promise.resolve({ data: filtered, error: cfg.error })
       }),
       maybeSingle: jest.fn().mockImplementation(() => {
         const d = cfg.singleData !== undefined ? cfg.singleData : cfg.data
-        return Promise.resolve({ data: d, error: cfg.error })
+        const filtered = applyFilters(d, builder._filters)
+        return Promise.resolve({ data: filtered, error: cfg.error })
       }),
       then: (resolve) => {
-        return resolve({ data: cfg.data, error: cfg.error })
+        const filtered = applyFilters(cfg.data, builder._filters)
+        return resolve({ data: filtered, error: cfg.error })
       },
     }
 
@@ -138,16 +154,46 @@ class MockSupabase {
     for (const method of ['select', 'insert', 'update', 'upsert', 'delete', 'eq', 'neq', 'in', 'order', 'limit']) {
       const orig = builder[method]
       builder[method] = jest.fn((...args) => {
+        // record simple filters for later application
+        if (method === 'eq') {
+          builder._filters.push({ op: 'eq', col: args[0], val: args[1] })
+        }
+        if (method === 'in') {
+          builder._filters.push({ op: 'in', col: args[0], vals: args[1] })
+        }
         orig(...args)
         return builder
       })
+    }
+
+    // Simple filtering implementation to support tests that rely on .eq/.in
+    function applyFilters(data, filters) {
+      if (!Array.isArray(data)) return data
+      let result = data
+      for (const f of filters || []) {
+        if (f.op === 'in') {
+          // f.vals expected to be an array
+          result = result.filter((row) => f.vals && Array.isArray(f.vals) && f.vals.includes(row.booking_ref))
+        }
+        if (f.op === 'eq') {
+          // support 'bookings.passenger_email' equals
+          if (f.col === 'bookings.passenger_email') {
+            result = result.filter((row) => row.bookings && row.bookings.passenger_email === f.val)
+          }
+          // generic equality on top-level fields
+          else {
+            result = result.filter((row) => row[f.col] === f.val)
+          }
+        }
+      }
+      return result
     }
 
     return builder
   }
 }
 
-// ── createMocks wrapper ──────────────────────────────────────────────────────
+// ─ createMocks wrapper 
 
 /**
  * Thin wrapper around `node-mocks-http` createMocks configured for JSON APIs.
