@@ -26,6 +26,34 @@ function formatDate(value) {
   }
 }
 
+/* ── tiny helpers ── */
+function badge(status) {
+  const map = {
+    awaiting_decision: { label: 'Awaiting Decision', cls: 'badge-warning' },
+    accepted:          { label: 'Accepted',          cls: 'badge-success' },
+    rejected:          { label: 'Rejected',          cls: 'badge-error' },
+    registered:        { label: 'Registered',        cls: 'badge-info' },
+    landed_on_time:    { label: 'On Time',           cls: 'badge-muted' },
+  }
+  const b = map[status] || { label: status || 'N/A', cls: 'badge-muted' }
+  return <span className={`claim-badge ${b.cls}`}>{b.label}</span>
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleString('en-IE', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
+}
+
+function delayLabel(mins) {
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return h > 0 ? `${h}h ${m}m` : `${m}m`
+}
+
+/* ── page ── */
 export default function AirlineClaims() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')

@@ -1,8 +1,15 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../utils/supabaseClient'
+import { getRoleFromEmail } from '../utils/auth'
 
 const AuthContext = createContext()
+
+function buildUser(supabaseUser) {
+  const email = supabaseUser.email
+  const role = getRoleFromEmail(email)
+  return { id: supabaseUser.id, email, role }
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -13,11 +20,7 @@ export function AuthProvider({ children }) {
     // Load the current Supabase session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email,
-          role: session.user.user_metadata?.role || 'passenger',
-        })
+        setUser(buildUser(session.user))
       }
       setLoading(false)
     })
@@ -26,11 +29,7 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email,
-            role: session.user.user_metadata?.role || 'passenger',
-          })
+          setUser(buildUser(session.user))
         } else {
           setUser(null)
         }

@@ -6,7 +6,7 @@ import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import Alert from '../components/ui/Alert'
 import { supabase } from '../utils/supabaseClient'
-import { validateLoginRole } from '../utils/auth'
+import { getRoleFromEmail } from '../utils/auth'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -38,12 +38,17 @@ export default function Login() {
       return
     }
 
-    // Verify the selected role matches the role the user signed up with
-    const registeredRole = data.user?.user_metadata?.role
-    const roleCheck = validateLoginRole(role, registeredRole)
-    if (!roleCheck.valid) {
+    // Verify the email domain matches the selected role
+    const detectedRole = getRoleFromEmail(email)
+    if (role === 'airline' && detectedRole !== 'airline') {
       await supabase.auth.signOut()
-      setError(roleCheck.error)
+      setError('Airline login requires an airline email address (e.g. @ryanair.com)')
+      setLoading(false)
+      return
+    }
+    if (role === 'passenger' && detectedRole === 'airline') {
+      await supabase.auth.signOut()
+      setError('This is an airline account. Please select "Airline" to log in.')
       setLoading(false)
       return
     }
@@ -82,7 +87,7 @@ export default function Login() {
             />
 
             <div style={{ marginTop: '8px' }}>
-              <label style={{ fontWeight: '500', color: 'var(--text-secondary)' }}>User Type:</label>
+              <label style={{ fontWeight: '500', color: 'var(--text-secondary)' }}>Login as:</label>
               <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)' }}>
                   <input
