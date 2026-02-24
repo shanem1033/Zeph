@@ -1,45 +1,25 @@
-import { validateLoginRole, validateCredentials, validateRegistration } from '../utils/auth'
+import { getRoleFromEmail, validateCredentials, validateRegistration } from '../utils/auth'
 
-describe('validateLoginRole', () => {
-    test('returns valid when selected role matches registered role (passenger)', () => {
-        const result = validateLoginRole('passenger', 'passenger')
-        expect(result.valid).toBe(true)
-        expect(result.error).toBeUndefined()
+describe('getRoleFromEmail', () => {
+    test('returns airline for @ryanair.com email', () => {
+        expect(getRoleFromEmail('ops@ryanair.com')).toBe('airline')
     })
 
-    test('returns valid when selected role matches registered role (airline)', () => {
-        const result = validateLoginRole('airline', 'airline')
-        expect(result.valid).toBe(true)
-        expect(result.error).toBeUndefined()
+    test('returns airline for @ryanair.com regardless of case', () => {
+        expect(getRoleFromEmail('OPS@RYANAIR.COM')).toBe('airline')
     })
 
-    test('returns error when passenger tries to log in as airline', () => {
-        const result = validateLoginRole('airline', 'passenger')
-        expect(result.valid).toBe(false)
-        expect(result.error).toContain('registered as a passenger')
+    test('returns passenger for a regular email', () => {
+        expect(getRoleFromEmail('john@gmail.com')).toBe('passenger')
     })
 
-    test('returns error when airline tries to log in as passenger', () => {
-        const result = validateLoginRole('passenger', 'airline')
-        expect(result.valid).toBe(false)
-        expect(result.error).toContain('registered as a airline')
+    test('returns passenger for empty email', () => {
+        expect(getRoleFromEmail('')).toBe('passenger')
     })
 
-    test('returns valid when no registered role exists (backwards compatibility)', () => {
-        const result = validateLoginRole('passenger', undefined)
-        expect(result.valid).toBe(true)
-    })
-
-    test('returns error when no role is selected', () => {
-        const result = validateLoginRole('', 'passenger')
-        expect(result.valid).toBe(false)
-        expect(result.error).toBe('Please select a user type')
-    })
-
-    test('returns error when null role is selected', () => {
-        const result = validateLoginRole(null, 'airline')
-        expect(result.valid).toBe(false)
-        expect(result.error).toBe('Please select a user type')
+    test('returns passenger for null/undefined', () => {
+        expect(getRoleFromEmail(null)).toBe('passenger')
+        expect(getRoleFromEmail(undefined)).toBe('passenger')
     })
 })
 

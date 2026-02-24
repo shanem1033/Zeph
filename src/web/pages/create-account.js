@@ -5,13 +5,13 @@ import PublicLayout from '../components/layouts/PublicLayout'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import Alert from '../components/ui/Alert'
+import { getRoleFromEmail } from '../utils/auth'
 
 export default function CreateAccount() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [role, setRole] = useState('passenger')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -37,6 +37,8 @@ export default function CreateAccount() {
     }
 
     setLoading(true)
+
+    const role = getRoleFromEmail(email)
 
     // Use server-side admin API to create pre-confirmed user (bypasses email rate limits)
     try {
@@ -106,32 +108,6 @@ export default function CreateAccount() {
                 placeholder="Re-enter your password"
                 required
               />
-
-              <div style={{ marginTop: '8px' }}>
-                <label style={{ fontWeight: '500', color: 'var(--text-secondary)' }}>Account Type:</label>
-                <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)' }}>
-                    <input
-                      type="radio"
-                      name="role"
-                      value="passenger"
-                      checked={role === 'passenger'}
-                      onChange={(e) => setRole(e.target.value)}
-                    />
-                    Passenger
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)' }}>
-                    <input
-                      type="radio"
-                      name="role"
-                      value="airline"
-                      checked={role === 'airline'}
-                      onChange={(e) => setRole(e.target.value)}
-                    />
-                    Airline
-                  </label>
-                </div>
-              </div>
 
               <Button type="submit" variant="primary" disabled={loading} style={{ marginTop: '16px', width: '100%' }}>
                 {loading ? 'Creating Account...' : 'Create Account'}
