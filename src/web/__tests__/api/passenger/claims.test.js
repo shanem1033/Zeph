@@ -65,6 +65,9 @@ describe('POST /api/passenger/claims', () => {
 
   test('returns claim data for valid bookingRefs', async () => {
     const sb = mockSupabase()
+    sb.forTable('bookings').returnData([
+      { booking_ref: VALID_UUID_A, flight_id: 'BA214-2026-02-15-0800', passenger_email: 'a@example.com' },
+    ])
     sb.forTable('registered_flights').returnData([
       {
         booking_ref: VALID_UUID_A,
@@ -92,6 +95,10 @@ describe('POST /api/passenger/claims', () => {
 
   test('returns multiple claims when multiple refs provided', async () => {
     const sb = mockSupabase()
+    sb.forTable('bookings').returnData([
+      { booking_ref: VALID_UUID_A, flight_id: 'FL-001', passenger_email: 'a@example.com' },
+      { booking_ref: VALID_UUID_B, flight_id: 'FL-002', passenger_email: 'a@example.com' },
+    ])
     sb.forTable('registered_flights').returnData([
       { booking_ref: VALID_UUID_A, claim_status: 'registered', bookings: { flight_id: 'FL-001', passenger_email: 'a@example.com' } },
       { booking_ref: VALID_UUID_B, claim_status: 'accepted', bookings: { flight_id: 'FL-002', passenger_email: 'a@example.com' } },
@@ -111,6 +118,7 @@ describe('POST /api/passenger/claims', () => {
 
   test('returns 500 when Supabase query fails', async () => {
     const sb = mockSupabase()
+    sb.forTable('bookings').returnData([{ booking_ref: VALID_UUID_A, passenger_email: 'a@example.com' }])
     sb.forTable('registered_flights').returnError({ message: 'connection refused' })
     // When there's an error, the handler throws — our mock needs to make
     // the awaited query reject.
@@ -130,6 +138,11 @@ describe('POST /api/passenger/claims', () => {
      * User A's claim — even if the request includes other users' refs.
      */
     const sb = mockSupabase()
+    sb.forTable('bookings').returnData([
+      { booking_ref: VALID_UUID_A, passenger_email: 'a@example.com' },
+      { booking_ref: VALID_UUID_B, passenger_email: 'b@example.com' },
+      { booking_ref: VALID_UUID_C, passenger_email: 'b@example.com' },
+    ])
     sb.forTable('registered_flights').returnData([
       { booking_ref: VALID_UUID_A, claim_status: 'registered', bookings: { flight_id: 'FL-A', passenger_email: 'a@example.com' } },
       { booking_ref: VALID_UUID_B, claim_status: 'accepted', bookings: { flight_id: 'FL-B', passenger_email: 'b@example.com' } },

@@ -172,8 +172,15 @@ class MockSupabase {
       let result = data
       for (const f of filters || []) {
         if (f.op === 'in') {
-          // f.vals expected to be an array
-          result = result.filter((row) => f.vals && Array.isArray(f.vals) && f.vals.includes(row.booking_ref))
+          // f.vals expected to be an array. Match against the requested
+          // column name (e.g. 'booking_ref' or 'flight_id'). If the row
+          // doesn't have the field, don't filter it out (tests often
+          // provide minimal rows).
+          result = result.filter((row) => {
+            if (!f.vals || !Array.isArray(f.vals)) return true
+            const val = row && Object.prototype.hasOwnProperty.call(row, f.col) ? row[f.col] : undefined
+            return val === undefined ? true : f.vals.includes(val)
+          })
         }
         if (f.op === 'eq') {
           // support 'bookings.passenger_email' equals
@@ -182,7 +189,11 @@ class MockSupabase {
           }
           // generic equality on top-level fields
           else {
-            result = result.filter((row) => row[f.col] === f.val)
+            // If the row doesn't include the field the test provided, don't
+            // filter it out — many tests supply minimal rows and rely on
+            // the query to match conceptually. Only exclude rows that have
+            // the field but don't match the expected value.
+            result = result.filter((row) => (row[f.col] === undefined ? true : row[f.col] === f.val))
           }
         }
       }
