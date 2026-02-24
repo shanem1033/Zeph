@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import AirlineLayout from '../../components/layouts/AirlineLayout'
-import Card from '../../components/ui/Card'
-import Button from '../../components/ui/Button'
 import Alert from '../../components/ui/Alert'
 import Input from '../../components/ui/Input'
+import Button from '../../components/ui/Button'
 import { airlineDecideFlight } from '../../utils/contract'
 
 async function sha256Bytes32Hex(text) {
@@ -12,18 +11,7 @@ async function sha256Bytes32Hex(text) {
   const digest = await crypto.subtle.digest('SHA-256', data)
   const bytes = Array.from(new Uint8Array(digest))
   const hex = bytes.map((b) => b.toString(16).padStart(2, '0')).join('')
-  // bytes32 is 32 bytes = 64 hex chars
   return `0x${hex}`
-}
-
-function formatDate(value) {
-  try {
-    if (!value) return ''
-    const date = new Date(value)
-    return Number.isNaN(date.getTime()) ? '' : date.toLocaleString()
-  } catch {
-    return ''
-  }
 }
 
 /* ── tiny helpers ── */
@@ -55,45 +43,40 @@ function delayLabel(mins) {
 
 /* ── page ── */
 export default function AirlineClaims() {
-  const [loading, setLoading] = useState(false)
+  const [claims, setClaims] = useState([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [deciding, setDeciding] = useState(null) // flightId being decided
+  const [filter, setFilter] = useState('all') // all | awaiting | accepted | rejected
 
-  const [flights, setFlights] = useState([])
+  // Reject evidence state
+  const [rejectFlightId, setRejectFlightId] = useState('')
   const [rejectEvidenceText, setRejectEvidenceText] = useState('')
   const [rejectEvidenceUrl, setRejectEvidenceUrl] = useState('')
-  const [activeFlightId, setActiveFlightId] = useState('')
 
-  const activeFlight = useMemo(
-    () => flights.find((f) => f.flight_id === activeFlightId) || null,
-    [flights, activeFlightId]
-  )
-
-  async function refresh() {
-    setLoading(true)
-    setError('')
+  const fetchClaims = useCallback(async () => {
     try {
-      const res = await fetch('/api/airline/claims')
-      const data = await res.json().catch(() => null)
-      if (!res.ok || !data?.ok) {
-        throw new Error(data?.error || 'Failed to load claims')
-      }
-      setFlights(Array.isArray(data.flights) ? data.flights : [])
+      setLoading(true)
+      setError('')
+      const res = await fetch('/api/flights/claims')
+      const json = await res.json()
+      if (!json.ok) throw new Error(json.error)
+      setClaims(json.claims)
     } catch (err) {
-      setError(err.message || 'Failed to load claims')
+      setError(err.message)
     } finally {
       setLoading(false)
     }
-  }
-
-  useEffect(() => {
-    refresh()
   }, [])
 
+  useEffect(() => { fetchClaims() }, [fetchClaims])
+
+  /* On-chain + DB decision for all passengers on a flight */
   async function decide({ flightId, decision }) {
     setError('')
     setSuccess('')
-    setLoading(true)
+    setDeciding(flightId)
 
     try {
       if (!flightId) throw new Error('Missing flightId')
@@ -108,7 +91,6 @@ export default function AirlineClaims() {
         if (!description && !url) {
           throw new Error('Evidence is required when rejecting')
         }
-
         evidence = { description: description || null, url: url || null }
         evidenceHash = await sha256Bytes32Hex(JSON.stringify(evidence))
       }
@@ -136,128 +118,406 @@ export default function AirlineClaims() {
       }
 
       setSuccess(`Decision recorded for ${flightId} (${decision}).`)
+      setRejectFlightId('')
       setRejectEvidenceText('')
       setRejectEvidenceUrl('')
-      setActiveFlightId('')
-      await refresh()
+      await fetchClaims()
     } catch (err) {
       setError(err.message || 'Failed to record decision')
     } finally {
-      setLoading(false)
+      setDeciding(null)
     }
   }
 
+  /* ── filter logic ── */
+  const filtered = claims
+    .map((flight) => {
+      if (filter === 'all') return flight
+      const passengers = flight.passengers.filter((p) => {
+        const cs = p.registration?.claim_status
+        if (filter === 'awaiting') return cs === 'awaiting_decision'
+        if (filter === 'accepted') return cs === 'accepted'
+        if (filter === 'rejected') return cs === 'rejected'
+        return true
+      })
+      return { ...flight, passengers }
+    })
+    .filter((flight) => filter === 'all' || flight.passengers.length > 0)
+
+  /* ── stats ── */
+  const allPassengers = claims.flatMap((f) => f.passengers)
+  const stats = {
+    total: allPassengers.length,
+    awaiting: allPassengers.filter((p) => p.registration?.claim_status === 'awaiting_decision').length,
+    accepted: allPassengers.filter((p) => p.registration?.claim_status === 'accepted').length,
+    rejected: allPassengers.filter((p) => p.registration?.claim_status === 'rejected').length,
+    delayedFlights: claims.length,
+  }
+
+  /* Does this flight have any passengers awaiting a decision? */
+  const hasAwaiting = (flight) =>
+    flight.passengers.some((p) => p.registration?.claim_status === 'awaiting_decision')
+
   return (
     <AirlineLayout>
-      <h1>Manage Claims</h1>
-
-      {error && <Alert type="error" message={error} onClose={() => setError('')} />}
-      {success && <Alert type="success" message={success} onClose={() => setSuccess('')} />}
-
-      <Card>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
-          <h2 style={{ margin: 0 }}>Flights Awaiting Decision</h2>
-          <Button variant="secondary" onClick={refresh} disabled={loading}>
-            {loading ? 'Loading…' : 'Refresh'}
-          </Button>
+      <div className="claims-page">
+        <div className="claims-header">
+          <h1>Compensation Claims</h1>
+          <p className="claims-subtitle">
+            Manage passenger compensation claims for delayed flights
+          </p>
         </div>
 
-        {flights.length === 0 ? (
-          <p style={{ marginTop: 'var(--space-lg)' }}>No flights are awaiting a decision.</p>
-        ) : (
-          <div style={{ marginTop: 'var(--space-lg)', display: 'grid', gap: '12px' }}>
-            {flights.map((f) => (
-              <div
-                key={f.flight_id}
-                style={{
-                  border: '1px solid var(--gray-200)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: 'var(--space-md)',
-                  background: 'var(--bg-secondary)',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{f.flight_id}</div>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-                      {f.origin} → {f.destination} · Delay: {f.delay_minutes ?? '?'} minutes
-                    </div>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '4px' }}>
-                      Scheduled arrival: {formatDate(f.scheduled_arrival_at)}
-                      {f.actual_arrival_at ? ` · Actual: ${formatDate(f.actual_arrival_at)}` : ''}
-                    </div>
-                  </div>
+        {error && <Alert type="error" message={error} onClose={() => setError('')} />}
+        {success && <Alert type="success" message={success} onClose={() => setSuccess('')} />}
 
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <Button
-                      variant="primary"
-                      disabled={loading}
-                      onClick={() => decide({ flightId: f.flight_id, decision: 'accepted' })}
-                    >
-                      Accept
-                    </Button>
-                    <Button
-                      variant="danger"
-                      disabled={loading}
-                      onClick={() => setActiveFlightId(f.flight_id)}
-                    >
-                      Reject
-                    </Button>
-                  </div>
-                </div>
+        {/* Stats row */}
+        <div className="claims-stats">
+          <div className="stat-card">
+            <span className="stat-value">{stats.delayedFlights}</span>
+            <span className="stat-label">Delayed Flights</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-value">{stats.total}</span>
+            <span className="stat-label">Total Passengers</span>
+          </div>
+          <div className="stat-card stat-warning">
+            <span className="stat-value">{stats.awaiting}</span>
+            <span className="stat-label">Awaiting Decision</span>
+          </div>
+          <div className="stat-card stat-success">
+            <span className="stat-value">{stats.accepted}</span>
+            <span className="stat-label">Accepted</span>
+          </div>
+          <div className="stat-card stat-error">
+            <span className="stat-value">{stats.rejected}</span>
+            <span className="stat-label">Rejected</span>
+          </div>
+        </div>
 
-                {f.decision ? (
-                  <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                    Decision already recorded: {f.decision.decision} ({f.decision.tx_hash?.slice(0, 10)}…)
-                  </div>
-                ) : null}
-              </div>
-            ))}
+        {/* Filters */}
+        <div className="claims-filters">
+          {['all', 'awaiting', 'accepted', 'rejected'].map((f) => (
+            <button
+              key={f}
+              className={`filter-btn ${filter === f ? 'active' : ''}`}
+              onClick={() => setFilter(f)}
+            >
+              {f === 'all' ? 'All' : f === 'awaiting' ? 'Awaiting Decision' : f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+          <button className="filter-btn refresh-btn" onClick={fetchClaims} disabled={loading}>
+            {loading ? 'Loading…' : 'Refresh'}
+          </button>
+        </div>
+
+        {/* Loading */}
+        {loading && <p className="claims-loading">Loading claims…</p>}
+
+        {/* Empty state */}
+        {!loading && filtered.length === 0 && (
+          <div className="claims-empty">
+            <span className="empty-icon">📋</span>
+            <h3>No claims found</h3>
+            <p>
+              {filter === 'all'
+                ? 'There are no delayed flights with passengers in the system.'
+                : `No claims with "${filter}" status.`}
+            </p>
           </div>
         )}
-      </Card>
 
-      {activeFlight ? (
-        <Card>
-          <h2 style={{ marginTop: 0 }}>Reject Flight: {activeFlight.flight_id}</h2>
-          <p style={{ color: 'var(--text-secondary)' }}>
-            Rejection requires evidence. This decision will apply to every passenger on the flight.
-          </p>
+        {/* Claims list */}
+        {!loading && filtered.map((flight) => (
+          <div key={flight.flight_id} className="flight-claim-card">
+            <div className="flight-claim-header">
+              <div className="flight-route">
+                <span className="flight-code">{flight.flight_code}</span>
+                <span className="route-text">
+                  {flight.origin} → {flight.destination}
+                </span>
+              </div>
+              <div className="flight-delay">
+                <span className="delay-value">{delayLabel(flight.delay_minutes)}</span>
+                <span className="delay-label">delay</span>
+              </div>
+            </div>
 
-          <div className="form">
-            <Input
-              label="Evidence URL (optional)"
-              value={rejectEvidenceUrl}
-              onChange={(e) => setRejectEvidenceUrl(e.target.value)}
-              placeholder="https://..."
-            />
+            <div className="flight-claim-times">
+              <div className="time-item">
+                <span className="time-label">Scheduled Departure</span>
+                <span className="time-value">{fmtDate(flight.scheduled_departure)}</span>
+              </div>
+              <div className="time-item">
+                <span className="time-label">Scheduled Arrival</span>
+                <span className="time-value">{fmtDate(flight.scheduled_arrival)}</span>
+              </div>
+              <div className="time-item">
+                <span className="time-label">Actual Arrival</span>
+                <span className="time-value highlight">{fmtDate(flight.actual_arrival)}</span>
+              </div>
+            </div>
 
-            <label className="input-label">
-              Evidence Description (required if no URL)
-              <textarea
-                value={rejectEvidenceText}
-                onChange={(e) => setRejectEvidenceText(e.target.value)}
-                placeholder="e.g. Weather diversion / ATC restriction / force majeure"
-                className="input-field"
-                rows={4}
-              />
-            </label>
+            {/* Passengers */}
+            {flight.passengers.length === 0 ? (
+              <p className="no-passengers">No passengers booked on this flight.</p>
+            ) : (
+              <div className="passengers-table-wrap">
+                <table className="passengers-table">
+                  <thead>
+                    <tr>
+                      <th>Passenger</th>
+                      <th>Passport</th>
+                      <th>Registered on Zeph</th>
+                      <th>Claim Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {flight.passengers.map((p) => {
+                      const reg = p.registration
+                      const claimStatus = reg?.claim_status
+                      return (
+                        <tr key={p.booking_ref}>
+                          <td>{p.passenger_email || p.passenger_name || '—'}</td>
+                          <td className="mono">{p.passport_number || '—'}</td>
+                          <td>{reg ? 'Yes' : 'No'}</td>
+                          <td>{reg ? badge(claimStatus) : <span className="text-muted">Not registered</span>}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
-            <div style={{ display: 'flex', gap: '8px', marginTop: 'var(--space-md)' }}>
-              <Button
-                variant="danger"
-                disabled={loading}
-                onClick={() => decide({ flightId: activeFlight.flight_id, decision: 'rejected' })}
-              >
-                Confirm Reject
-              </Button>
-              <Button variant="secondary" disabled={loading} onClick={() => setActiveFlightId('')}>
-                Cancel
-              </Button>
+            {/* Flight-level decision buttons (applies to all passengers) */}
+            {hasAwaiting(flight) && (
+              <div className="flight-actions">
+                <Button
+                  variant="primary"
+                  disabled={!!deciding}
+                  onClick={() => decide({ flightId: flight.flight_id, decision: 'accepted' })}
+                >
+                  {deciding === flight.flight_id ? 'Processing…' : 'Accept All'}
+                </Button>
+                <Button
+                  variant="danger"
+                  disabled={!!deciding}
+                  onClick={() => setRejectFlightId(flight.flight_id)}
+                >
+                  Reject All
+                </Button>
+              </div>
+            )}
+
+            <div className="flight-claim-footer">
+              <span className="flight-id-label">Flight ID: {flight.flight_id}</span>
             </div>
           </div>
-        </Card>
-      ) : null}
+        ))}
+
+        {/* Reject evidence modal */}
+        {rejectFlightId && (
+          <div className="reject-overlay" onClick={() => setRejectFlightId('')}>
+            <div className="reject-card" onClick={(e) => e.stopPropagation()}>
+              <h2 style={{ marginTop: 0 }}>Reject Flight: {rejectFlightId}</h2>
+              <p style={{ color: 'var(--text-secondary)' }}>
+                Rejection requires evidence. This decision will apply to every passenger on the flight.
+              </p>
+
+              <div className="form">
+                <Input
+                  label="Evidence URL (optional)"
+                  value={rejectEvidenceUrl}
+                  onChange={(e) => setRejectEvidenceUrl(e.target.value)}
+                  placeholder="https://..."
+                />
+
+                <label className="input-label">
+                  Evidence Description (required if no URL)
+                  <textarea
+                    value={rejectEvidenceText}
+                    onChange={(e) => setRejectEvidenceText(e.target.value)}
+                    placeholder="e.g. Weather diversion / ATC restriction / force majeure"
+                    className="input-field"
+                    rows={4}
+                  />
+                </label>
+
+                <div style={{ display: 'flex', gap: '8px', marginTop: 'var(--space-md)' }}>
+                  <Button
+                    variant="danger"
+                    disabled={!!deciding}
+                    onClick={() => decide({ flightId: rejectFlightId, decision: 'rejected' })}
+                  >
+                    {deciding ? 'Processing…' : 'Confirm Reject'}
+                  </Button>
+                  <Button variant="secondary" disabled={!!deciding} onClick={() => setRejectFlightId('')}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <style jsx>{`
+        .claims-page {
+          max-width: 1100px;
+          margin: 0 auto;
+        }
+        .claims-header h1 {
+          margin: 0 0 0.25rem;
+          font-size: 1.75rem;
+        }
+        .claims-subtitle {
+          color: var(--text-muted);
+          margin: 0 0 1.5rem;
+        }
+
+        /* ── Stats ── */
+        .claims-stats {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          gap: var(--space-md);
+          margin-bottom: var(--space-lg);
+        }
+        .stat-card {
+          background: var(--bg-secondary);
+          border: 1px solid var(--gray-200);
+          border-radius: var(--radius-lg);
+          padding: var(--space-md);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+        }
+        .stat-value { font-size: 1.75rem; font-weight: 700; }
+        .stat-label {
+          font-size: 0.8rem; color: var(--text-muted);
+          text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .stat-warning .stat-value { color: var(--warning-color); }
+        .stat-success .stat-value { color: var(--success-color); }
+        .stat-error   .stat-value { color: var(--error-color); }
+
+        /* ── Filters ── */
+        .claims-filters {
+          display: flex; gap: var(--space-sm);
+          margin-bottom: var(--space-lg); flex-wrap: wrap;
+        }
+        .filter-btn {
+          padding: 0.5rem 1rem; border-radius: var(--radius-md);
+          border: 1px solid var(--gray-200); background: var(--bg-secondary);
+          color: var(--text-secondary); cursor: pointer;
+          font-size: 0.875rem; font-weight: 500; transition: all 0.2s;
+        }
+        .filter-btn:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+        .filter-btn.active {
+          background: var(--primary-color);
+          border-color: var(--primary-color); color: #fff;
+        }
+        .refresh-btn { margin-left: auto; }
+
+        /* ── Loading / Empty ── */
+        .claims-loading { color: var(--text-muted); text-align: center; padding: 3rem 0; }
+        .claims-empty { text-align: center; padding: 3rem 1rem; color: var(--text-muted); }
+        .empty-icon { font-size: 3rem; display: block; margin-bottom: 0.5rem; }
+        .claims-empty h3 { margin: 0 0 0.25rem; color: var(--text-secondary); }
+
+        /* ── Flight claim card ── */
+        .flight-claim-card {
+          background: var(--bg-secondary); border: 1px solid var(--gray-200);
+          border-radius: var(--radius-lg); margin-bottom: var(--space-lg); overflow: hidden;
+        }
+        .flight-claim-header {
+          display: flex; justify-content: space-between; align-items: center;
+          padding: var(--space-md) var(--space-lg);
+          background: var(--bg-tertiary); border-bottom: 1px solid var(--gray-200);
+        }
+        .flight-route { display: flex; align-items: center; gap: var(--space-md); }
+        .flight-code { font-weight: 700; font-size: 1.15rem; color: var(--primary-color); }
+        .route-text { color: var(--text-secondary); font-size: 0.95rem; }
+        .flight-delay { display: flex; flex-direction: column; align-items: flex-end; }
+        .delay-value { font-weight: 700; font-size: 1.25rem; color: var(--error-color); }
+        .delay-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
+
+        /* ── Times ── */
+        .flight-claim-times {
+          display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: var(--space-md); padding: var(--space-md) var(--space-lg);
+          border-bottom: 1px solid var(--gray-200);
+        }
+        .time-item { display: flex; flex-direction: column; gap: 2px; }
+        .time-label {
+          font-size: 0.75rem; color: var(--text-muted);
+          text-transform: uppercase; letter-spacing: 0.3px;
+        }
+        .time-value { font-size: 0.9rem; }
+        .time-value.highlight { color: var(--error-color); font-weight: 600; }
+
+        /* ── Passengers table ── */
+        .passengers-table-wrap { overflow-x: auto; padding: var(--space-md) var(--space-lg); }
+        .passengers-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+        .passengers-table th {
+          text-align: left; padding: 0.6rem 0.75rem; color: var(--text-muted);
+          font-weight: 600; font-size: 0.75rem; text-transform: uppercase;
+          letter-spacing: 0.4px; border-bottom: 1px solid var(--gray-200);
+        }
+        .passengers-table td {
+          padding: 0.75rem; border-bottom: 1px solid var(--gray-200); vertical-align: middle;
+        }
+        .passengers-table tr:last-child td { border-bottom: none; }
+        .mono { font-family: var(--font-mono); font-size: 0.8rem; }
+        .text-muted { color: var(--text-muted); font-size: 0.85rem; }
+        .no-passengers { color: var(--text-muted); padding: var(--space-md) var(--space-lg); font-style: italic; }
+
+        /* ── Badges ── */
+        .claim-badge {
+          display: inline-block; padding: 0.2rem 0.6rem;
+          border-radius: var(--radius-full); font-size: 0.75rem;
+          font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;
+        }
+        .badge-warning { background: var(--warning-bg); color: var(--warning-color); }
+        .badge-success { background: var(--success-bg); color: var(--success-color); }
+        .badge-error   { background: var(--error-bg);   color: var(--error-color); }
+        .badge-info    { background: var(--info-bg);     color: var(--info-color); }
+        .badge-muted   { background: var(--gray-200);    color: var(--text-muted); }
+
+        /* ── Flight-level actions ── */
+        .flight-actions {
+          display: flex; gap: var(--space-sm);
+          padding: var(--space-md) var(--space-lg);
+          border-top: 1px solid var(--gray-200);
+        }
+
+        /* ── Footer ── */
+        .flight-claim-footer {
+          padding: var(--space-sm) var(--space-lg);
+          border-top: 1px solid var(--gray-200);
+        }
+        .flight-id-label { font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono); }
+
+        /* ── Reject overlay ── */
+        .reject-overlay {
+          position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+          backdrop-filter: blur(4px); display: flex;
+          align-items: center; justify-content: center;
+          z-index: 1000; padding: 1.5rem;
+        }
+        .reject-card {
+          background: var(--bg-secondary); border: 1px solid var(--gray-200);
+          border-radius: var(--radius-lg); padding: var(--space-xl);
+          max-width: 540px; width: 100%;
+        }
+
+        @media (max-width: 768px) {
+          .claims-stats { grid-template-columns: repeat(2, 1fr); }
+          .flight-claim-header { flex-direction: column; align-items: flex-start; gap: var(--space-sm); }
+          .flight-claim-times { grid-template-columns: 1fr; }
+        }
+      `}</style>
     </AirlineLayout>
   )
 }
