@@ -1,4 +1,4 @@
-import { getRoleFromEmail, validateCredentials, validateRegistration } from '../utils/auth'
+import { getRoleFromEmail, getAirlineCodeFromEmail, validateCredentials, validateRegistration } from '../utils/auth'
 
 describe('getRoleFromEmail', () => {
     test('returns airline for @ryanair.com email', () => {
@@ -7,6 +7,26 @@ describe('getRoleFromEmail', () => {
 
     test('returns airline for @ryanair.com regardless of case', () => {
         expect(getRoleFromEmail('OPS@RYANAIR.COM')).toBe('airline')
+    })
+
+    test('returns airline for @easyjet.com email', () => {
+        expect(getRoleFromEmail('ops@easyjet.com')).toBe('airline')
+    })
+
+    test('returns airline for @lufthansa.com email', () => {
+        expect(getRoleFromEmail('ops@lufthansa.com')).toBe('airline')
+    })
+
+    test('returns airline for @airfrance.com email', () => {
+        expect(getRoleFromEmail('ops@airfrance.com')).toBe('airline')
+    })
+
+    test('returns airline for @iberia.com email', () => {
+        expect(getRoleFromEmail('ops@iberia.com')).toBe('airline')
+    })
+
+    test('returns airline for @britishairways.com email', () => {
+        expect(getRoleFromEmail('ops@britishairways.com')).toBe('airline')
     })
 
     test('returns passenger for a regular email', () => {
@@ -20,6 +40,41 @@ describe('getRoleFromEmail', () => {
     test('returns passenger for null/undefined', () => {
         expect(getRoleFromEmail(null)).toBe('passenger')
         expect(getRoleFromEmail(undefined)).toBe('passenger')
+    })
+})
+
+describe('getAirlineCodeFromEmail', () => {
+    test('returns FR for ryanair.com', () => {
+        expect(getAirlineCodeFromEmail('ops@ryanair.com')).toBe('FR')
+    })
+
+    test('returns U2 for easyjet.com', () => {
+        expect(getAirlineCodeFromEmail('ops@easyjet.com')).toBe('U2')
+    })
+
+    test('returns LH for lufthansa.com', () => {
+        expect(getAirlineCodeFromEmail('ops@lufthansa.com')).toBe('LH')
+    })
+
+    test('returns AF for airfrance.com', () => {
+        expect(getAirlineCodeFromEmail('ops@airfrance.com')).toBe('AF')
+    })
+
+    test('returns IB for iberia.com', () => {
+        expect(getAirlineCodeFromEmail('ops@iberia.com')).toBe('IB')
+    })
+
+    test('returns BA for britishairways.com', () => {
+        expect(getAirlineCodeFromEmail('ops@britishairways.com')).toBe('BA')
+    })
+
+    test('returns null for non-airline email', () => {
+        expect(getAirlineCodeFromEmail('john@gmail.com')).toBeNull()
+    })
+
+    test('returns null for null/undefined', () => {
+        expect(getAirlineCodeFromEmail(null)).toBeNull()
+        expect(getAirlineCodeFromEmail(undefined)).toBeNull()
     })
 })
 

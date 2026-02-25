@@ -4,6 +4,8 @@ import Alert from '../../components/ui/Alert'
 import Input from '../../components/ui/Input'
 import Button from '../../components/ui/Button'
 import { airlineDecideFlight } from '../../utils/contract'
+import { useAuth } from '../../context/AuthContext'
+import { getAirlineCodeFromEmail } from '../../utils/auth'
 
 async function sha256Bytes32Hex(text) {
   const encoder = new TextEncoder()
@@ -18,10 +20,10 @@ async function sha256Bytes32Hex(text) {
 function badge(status) {
   const map = {
     awaiting_decision: { label: 'Awaiting Decision', cls: 'badge-warning' },
-    accepted:          { label: 'Accepted',          cls: 'badge-success' },
-    rejected:          { label: 'Rejected',          cls: 'badge-error' },
-    registered:        { label: 'Registered',        cls: 'badge-info' },
-    landed_on_time:    { label: 'On Time',           cls: 'badge-muted' },
+    accepted: { label: 'Accepted', cls: 'badge-success' },
+    rejected: { label: 'Rejected', cls: 'badge-error' },
+    registered: { label: 'Registered', cls: 'badge-info' },
+    landed_on_time: { label: 'On Time', cls: 'badge-muted' },
   }
   const b = map[status] || { label: status || 'N/A', cls: 'badge-muted' }
   return <span className={`claim-badge ${b.cls}`}>{b.label}</span>
@@ -43,6 +45,9 @@ function delayLabel(mins) {
 
 /* ── page ── */
 export default function AirlineClaims() {
+  const { user } = useAuth()
+  const airlineCode = getAirlineCodeFromEmail(user?.email)
+
   const [claims, setClaims] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -59,7 +64,8 @@ export default function AirlineClaims() {
     try {
       setLoading(true)
       setError('')
-      const res = await fetch('/api/flights/claims')
+      const params = airlineCode ? `?airlineCode=${airlineCode}` : ''
+      const res = await fetch(`/api/flights/claims${params}`)
       const json = await res.json()
       if (!json.ok) throw new Error(json.error)
       setClaims(json.claims)
@@ -68,7 +74,7 @@ export default function AirlineClaims() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [airlineCode])
 
   useEffect(() => { fetchClaims() }, [fetchClaims])
 

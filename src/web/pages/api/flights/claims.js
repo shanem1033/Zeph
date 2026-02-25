@@ -3,15 +3,24 @@ import { getSupabaseAdmin } from '../../../utils/supabaseServer'
 export default async function handler(req, res) {
   const supabase = getSupabaseAdmin()
 
-  /* ─── GET: fetch all delayed flights with their claims ─── */
+  /* ─── GET: fetch delayed flights with their claims ─── */
   if (req.method === 'GET') {
+    const { airlineCode } = req.query
+
     // 1. All flights that have actually landed and are delayed ≥ 180 min
-    const { data: flights, error: flightsErr } = await supabase
+    let query = supabase
       .from('flights')
       .select('*')
       .gte('delay_minutes', 180)
       .not('actual_arrival_at', 'is', null)
       .order('actual_arrival_at', { ascending: false })
+
+    // If an airline code is provided, only return flights whose code starts with it
+    if (airlineCode) {
+      query = query.like('flight_code', `${airlineCode}%`)
+    }
+
+    const { data: flights, error: flightsErr } = await query
 
     if (flightsErr) {
       return res.status(500).json({ ok: false, error: flightsErr.message })
