@@ -83,43 +83,43 @@ insert into public.routes (origin, destination, flight_code, duration_minutes) v
   -- London routes
   ('London', 'Paris', 'BA214', 75),
   ('London', 'Berlin', 'BA962', 110),
-  ('London', 'Rome', 'BA548', 150),
+  ('London', 'Dublin', 'BA548', 85),
   ('London', 'Madrid', 'BA456', 145),
   ('London', 'Amsterdam', 'BA432', 70),
   
   -- Paris routes
   ('Paris', 'London', 'AF112', 75),
   ('Paris', 'Berlin', 'AF234', 105),
-  ('Paris', 'Rome', 'AF348', 120),
+  ('Paris', 'Dublin', 'AF348', 110),
   ('Paris', 'Madrid', 'AF782', 120),
   ('Paris', 'Amsterdam', 'AF680', 80),
   
   -- Berlin routes
   ('Berlin', 'London', 'LH903', 110),
   ('Berlin', 'Paris', 'LH456', 105),
-  ('Berlin', 'Rome', 'LH712', 115),
+  ('Berlin', 'Dublin', 'LH712', 140),
   ('Berlin', 'Madrid', 'LH834', 180),
   ('Berlin', 'Amsterdam', 'LH523', 90),
   
-  -- Rome routes
-  ('Rome', 'London', 'AZ201', 150),
-  ('Rome', 'Paris', 'AZ340', 120),
-  ('Rome', 'Berlin', 'AZ567', 115),
-  ('Rome', 'Madrid', 'AZ892', 140),
-  ('Rome', 'Amsterdam', 'AZ654', 130),
+  -- Dublin routes (Ryanair)
+  ('Dublin', 'London', 'FR201', 80),
+  ('Dublin', 'Paris', 'FR340', 120),
+  ('Dublin', 'Berlin', 'FR567', 150),
+  ('Dublin', 'Madrid', 'FR892', 165),
+  ('Dublin', 'Amsterdam', 'FR654', 110),
   
   -- Madrid routes
   ('Madrid', 'London', 'IB321', 145),
   ('Madrid', 'Paris', 'IB743', 120),
   ('Madrid', 'Berlin', 'IB982', 180),
-  ('Madrid', 'Rome', 'IB654', 140),
+  ('Madrid', 'Dublin', 'IB654', 155),
   ('Madrid', 'Amsterdam', 'IB876', 150),
   
-  -- Amsterdam routes
-  ('Amsterdam', 'London', 'KL118', 70),
-  ('Amsterdam', 'Paris', 'KL245', 80),
-  ('Amsterdam', 'Berlin', 'KL672', 90),
-  ('Amsterdam', 'Rome', 'KL489', 130),
-  ('Amsterdam', 'Madrid', 'KL357', 150)
+  -- Amsterdam routes (EasyJet)
+  ('Amsterdam', 'London', 'U2118', 70),
+  ('Amsterdam', 'Paris', 'U2245', 80),
+  ('Amsterdam', 'Berlin', 'U2672', 90),
+  ('Amsterdam', 'Dublin', 'U2489', 110),
+  ('Amsterdam', 'Madrid', 'U2357', 150)
 
 on conflict (origin, destination, flight_code) do nothing;
