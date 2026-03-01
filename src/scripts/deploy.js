@@ -33,8 +33,10 @@ function upsertEnvVars(filePath, vars) {
 async function main() {
   console.log(" Starting deployment...\n");
 
-  // Get signers (accounts from the network)
-  const [deployer, airline, oracle] = await hre.ethers.getSigners();
+  // Get signers — on mainnet (Polygon etc.) only ONE signer is available from PRIVATE_KEY.
+  // Airline and oracle fall back to the deployer in that case.
+  const signers = await hre.ethers.getSigners();
+  const deployer = signers[0];
 
   // Allow using an external wallet (e.g., MetaMask) as the airline.
   // This avoids needing to grant AIRLINE_ROLE manually after each redeploy.
@@ -42,13 +44,21 @@ async function main() {
     process.env.AIRLINE_ADDRESS || process.env.NEXT_PUBLIC_AIRLINE_ADDRESS,
     "AIRLINE_ADDRESS"
   );
-  const airlineAddress = airlineFromEnv || airline.address;
+  const airlineAddress = airlineFromEnv || (signers[1] ? signers[1].address : deployer.address);
+
+  // Oracle: use ORACLE_ADDRESS env var, or fall back to third signer, or deployer.
+  const oracleFromEnv = resolveOptionalAddress(
+    process.env.ORACLE_ADDRESS,
+    "ORACLE_ADDRESS"
+  );
+  const oracle = signers[2] || signers[1] || deployer;
+  const oracleAddress = oracleFromEnv || oracle.address;
 
   console.log("Deployment Details:");
   console.log("├─ Network:", hre.network.name);
   console.log("├─ Deployer:", deployer.address);
   console.log("├─ Airline:", airlineAddress);
-  console.log("└─ Oracle:", oracle.address);
+  console.log("└─ Oracle:", oracleAddress);
   console.log();
 
   // Get contract factory
@@ -56,7 +66,7 @@ async function main() {
 
   // Deploy contract with airline and oracle addresses
   console.log("Deploying Compensation contract...");
-  const compensation = await Compensation.deploy(airlineAddress, oracle.address);
+  const compensation = await Compensation.deploy(airlineAddress, oracleAddress);
 
   await compensation.waitForDeployment();
   const contractAddress = await compensation.getAddress();
@@ -64,21 +74,27 @@ async function main() {
   console.log("Contract deployed to:", contractAddress);
   console.log();
 
-  // Mark FR123 as delayed for testing
-  console.log("Setting up test flight FR123 with 240 minute delay...");
-  const oracleContract = compensation.connect(oracle);
-  const setDelayTx = await oracleContract.oracleReportDelay("FR123", 240);
-  await setDelayTx.wait();
-  console.log("FR123 marked as delayed (240 minutes)");
-  console.log();
+  // Only seed test flight data on local/localhost networks to avoid wasting real gas on mainnet.
+  const isLocalNetwork = ["hardhat", "localhost"].includes(hre.network.name);
+  if (isLocalNetwork) {
+    console.log("Setting up test flight FR123 with 240 minute delay...");
+    const oracleContract = compensation.connect(oracle);
+    const setDelayTx = await oracleContract.oracleReportDelay("FR123", 240);
+    await setDelayTx.wait();
+    console.log("FR123 marked as delayed (240 minutes)");
+    console.log();
+  } else {
+    console.log("Skipping test data seed on", hre.network.name, "(mainnet — use oracle worker to report real delays)");
+    console.log();
+  }
 
   // Save deployment info for the frontend
   const deploymentInfo = {
     network: hre.network.name,
     contractAddress: contractAddress,
     deployer: deployer.address,
-    airline: airline.address,
-    oracle: oracle.address,
+    airline: airlineAddress,
+    oracle: oracleAddress,
     deployedAt: new Date().toISOString(),
   };
 

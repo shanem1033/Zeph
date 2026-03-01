@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: 'ADMIN_PRIVATE_KEY is not configured on the server' })
   }
 
-  const rpcUrl = process.env.HARDHAT_RPC_URL || 'http://127.0.0.1:8545'
+  const rpcUrl = process.env.RPC_URL || process.env.POLYGON_RPC_URL || 'https://polygon-bor-rpc.publicnode.com'
   const contractAddress =
     process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ||
     Compensation?.address ||
