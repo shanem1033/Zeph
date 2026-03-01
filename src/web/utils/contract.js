@@ -1,8 +1,8 @@
 import { ethers } from 'ethers'
 import Compensation from '../contracts/Compensation.json'
 
-const DEFAULT_CHAIN_ID = 31337
-const DEFAULT_CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+const DEFAULT_CHAIN_ID = 137
+const DEFAULT_CONTRACT_ADDRESS = ""
 
 function getExpectedChainId() {
   const fromEnv = process.env.NEXT_PUBLIC_CHAIN_ID
@@ -40,26 +40,36 @@ async function ensureCorrectNetwork(provider) {
       params: [{ chainId: chainIdHex }],
     })
   } catch (switchError) {
-    // 4902 = Unrecognized chain
-    if (switchError?.code === 4902 && expectedChainId === 31337) {
-      await window.ethereum.request({
-        method: 'wallet_addEthereumChain',
-        params: [
-          {
-            chainId: '0x7A69',
-            chainName: 'Hardhat Local',
-            rpcUrls: ['http://127.0.0.1:8545'],
-            nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-          },
-        ],
-      })
+    // 4902 = Unrecognized chain — add it automatically
+    if (switchError?.code === 4902) {
+      const chainConfigs = {
+        137: {
+          chainId: '0x89',
+          chainName: 'Polygon Mainnet',
+          rpcUrls: ['https://polygon-rpc.com'],
+          nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+          blockExplorerUrls: ['https://polygonscan.com'],
+        },
+        31337: {
+          chainId: '0x7A69',
+          chainName: 'Hardhat Local',
+          rpcUrls: ['http://127.0.0.1:8545'],
+          nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+        },
+      }
 
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0x7A69' }],
-      })
-
-      return
+      const config = chainConfigs[expectedChainId]
+      if (config) {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [config],
+        })
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: config.chainId }],
+        })
+        return
+      }
     }
 
     throw new Error(
@@ -72,10 +82,12 @@ async function ensureHasGasFunds(signer) {
   const balance = await signer.getBalance()
   if (!balance || balance.isZero()) {
     const expectedChainId = getExpectedChainId()
+    const isPolygon = expectedChainId === 137
     throw new Error(
       `Insufficient funds for gas on this network (chainId ${expectedChainId}). ` +
-      `Testnets still require gas paid in test ETH. If you're using Hardhat Local (31337), ` +
-      `switch MetaMask to Localhost and use a funded Hardhat account.`
+      (isPolygon
+        ? `Polygon Mainnet requires POL to pay gas fees. Please add POL to your wallet.`
+        : `If you're using Hardhat Local (31337), switch MetaMask to Localhost and use a funded Hardhat account.`)
     )
   }
 }
@@ -87,7 +99,8 @@ export async function getProvider() {
 
   console.log('MetaMask chainId before creating provider:', window.ethereum.chainId)
 
-  const provider = new ethers.providers.Web3Provider(window.ethereum)
+  // Pass 'any' so ethers v5 doesn't throw NETWORK_ERROR when MetaMask switches chains.
+  const provider = new ethers.providers.Web3Provider(window.ethereum, 'any')
   await provider.send("eth_requestAccounts", [])
 
   const network = await provider.getNetwork()
@@ -120,7 +133,6 @@ export async function getContract(signer) {
 export async function registerFlight(flightId) {
   try {
     const { signer } = await connectWallet()
-    await ensureHasGasFunds(signer)
     const contract = await getContract(signer)
 
     // Call the smart contract function
@@ -144,7 +156,7 @@ export async function registerFlight(flightId) {
 
     if (error.code === 'INSUFFICIENT_FUNDS' || /insufficient funds/i.test(error.message || '')) {
       throw new Error(
-        'Insufficient funds to pay gas. Testnets are not gas-free — you need test ETH on the selected network. '
+        'Insufficient funds to pay gas. Polygon Mainnet requires POL in your wallet to cover transaction fees.'
       )
     }
 
@@ -159,7 +171,6 @@ export async function registerFlight(flightId) {
 export async function airlineDecideFlight({ flightId, accept, evidenceHash }) {
   try {
     const { signer } = await connectWallet()
-    await ensureHasGasFunds(signer)
     const contract = await getContract(signer)
 
     // Fail fast with a clearer error if the connected wallet cannot call airline-only methods.
