@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { flightId, decision, evidence, txHash, chainId, contractAddress, decidedByWallet } =
+    const { flightId, decision, evidence, txHash, chainId, contractAddress, decidedByWallet, rejectionReportPath } =
       req.body || {}
 
     if (!flightId || typeof flightId !== 'string') {
@@ -76,6 +76,7 @@ export default async function handler(req, res) {
           decision,
           evidence: evidenceJson,
           evidence_hash: evidenceHash,
+          rejection_report_path: decision === 'rejected' && rejectionReportPath ? rejectionReportPath : null,
           tx_hash: txHash || null,
           chain_id: Number.isFinite(Number(chainId)) ? Number(chainId) : null,
           contract_address: contractAddress || null,
@@ -104,6 +105,7 @@ export default async function handler(req, res) {
       flightId,
       decision,
       evidenceHash,
+      rejectionReportPath: decision === 'rejected' && rejectionReportPath ? rejectionReportPath : null,
       claimStatus: newClaimStatus,
     })
   } catch (err) {

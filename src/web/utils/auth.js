@@ -15,19 +15,6 @@ export const AIRLINE_DOMAINS = [
 ]
 
 /**
- * Maps airline email domains to their IATA flight-code prefixes.
- * Used to filter flights so each airline only sees their own.
- */
-export const AIRLINE_CODE_MAP = {
-  'ryanair.com':        'FR',
-  'easyjet.com':        'U2',
-  'lufthansa.com':      'LH',
-  'airfrance.com':      'AF',
-  'iberia.com':         'IB',
-  'britishairways.com': 'BA',
-}
-
-/**
  * Determines the user role based on their email domain.
  * @param {string} email
  * @returns {'airline' | 'passenger'}
@@ -39,14 +26,29 @@ export function getRoleFromEmail(email) {
 }
 
 /**
- * Returns the IATA flight-code prefix for an airline email.
- * e.g. 'ops@lufthansa.com' → 'LH'
- * Returns null for non-airline emails.
+ * Map of airline email domains to ICAO / IATA-style codes used to filter
+ * flights in the claims dashboard.  Extend this map as new airlines are
+ * on-boarded.
+ */
+const DOMAIN_TO_AIRLINE_CODE = {
+  'ryanair.com': 'FR',
+  'easyjet.com': 'U2',
+  'lufthansa.com': 'LH',
+  'airfrance.com': 'AF',
+  'iberia.com': 'IB',
+  'britishairways.com': 'BA',
+}
+
+/**
+ * Extracts the airline code from an email address.
+ * Returns `null` when the domain is not a known airline.
+ * @param {string} email
+ * @returns {string | null}
  */
 export function getAirlineCodeFromEmail(email) {
   if (!email) return null
   const domain = email.split('@')[1]?.toLowerCase()
-  return AIRLINE_CODE_MAP[domain] || null
+  return DOMAIN_TO_AIRLINE_CODE[domain] || null
 }
 
 export function validateCredentials(email, password) {

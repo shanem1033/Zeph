@@ -99,8 +99,8 @@ export default async function handler(req, res) {
     if (!bookingRef) {
       return res.status(400).json({ ok: false, error: 'Missing bookingRef' })
     }
-    if (!['accepted', 'rejected'].includes(claimStatus)) {
-      return res.status(400).json({ ok: false, error: 'claimStatus must be "accepted" or "rejected"' })
+    if (!['awaiting_decision', 'accepted', 'rejected'].includes(claimStatus)) {
+      return res.status(400).json({ ok: false, error: 'claimStatus must be "awaiting_decision", "accepted" or "rejected"' })
     }
 
     const { data, error } = await supabase
@@ -117,6 +117,65 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, updated: data })
   }
 
-  res.setHeader('Allow', ['GET', 'PATCH'])
+  /* ─── POST: mark all registered claims on a delayed flight as awaiting_decision ─── */
+  if (req.method === 'POST') {
+    let body
+    try {
+      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
+    } catch {
+      return res.status(400).json({ ok: false, error: 'Invalid JSON body' })
+    }
+
+    const { flightId } = body || {}
+    if (!flightId || typeof flightId !== 'string') {
+      return res.status(400).json({ ok: false, error: 'Missing flightId' })
+    }
+
+    // Verify the flight exists and is delayed ≥ 180 min
+    const { data: flight, error: flightErr } = await supabase
+      .from('flights')
+      .select('flight_id, delay_minutes, actual_arrival_at')
+      .eq('flight_id', flightId)
+      .single()
+
+    if (flightErr || !flight) {
+      return res.status(404).json({ ok: false, error: 'Flight not found' })
+    }
+
+    if (!flight.actual_arrival_at || (flight.delay_minutes || 0) < 180) {
+      return res.status(400).json({ ok: false, error: 'Flight is not delayed ≥ 180 minutes' })
+    }
+
+    // Find all bookings for this flight
+    const { data: bookings, error: bookingsErr } = await supabase
+      .from('bookings')
+      .select('booking_ref')
+      .eq('flight_id', flightId)
+
+    if (bookingsErr) {
+      return res.status(500).json({ ok: false, error: bookingsErr.message })
+    }
+
+    const bookingRefs = (bookings || []).map((b) => b.booking_ref).filter(Boolean)
+    if (bookingRefs.length === 0) {
+      return res.status(200).json({ ok: true, updated: 0, message: 'No bookings found for this flight' })
+    }
+
+    // Update all registered_flights that are still in 'registered' status
+    const { data: updated, error: updateErr } = await supabase
+      .from('registered_flights')
+      .update({ claim_status: 'awaiting_decision' })
+      .in('booking_ref', bookingRefs)
+      .eq('claim_status', 'registered')
+      .select('booking_ref, claim_status')
+
+    if (updateErr) {
+      return res.status(500).json({ ok: false, error: updateErr.message })
+    }
+
+    return res.status(200).json({ ok: true, updated: (updated || []).length })
+  }
+
+  res.setHeader('Allow', ['GET', 'PATCH', 'POST'])
   return res.status(405).json({ ok: false, error: 'Method not allowed' })
 }
