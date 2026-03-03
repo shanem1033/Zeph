@@ -59,6 +59,8 @@ export default function AirlineClaims() {
   const [rejectFlightId, setRejectFlightId] = useState('')
   const [rejectEvidenceText, setRejectEvidenceText] = useState('')
   const [rejectEvidenceUrl, setRejectEvidenceUrl] = useState('')
+  const [rejectPdfFile, setRejectPdfFile] = useState(null)
+  const [uploadProgress, setUploadProgress] = useState('')
 
   const fetchClaims = useCallback(async () => {
     try {
@@ -91,20 +93,61 @@ export default function AirlineClaims() {
       let evidence = null
       let evidenceHash = null
 
+      let rejectionReportPath = null
+
       if (!accept) {
         const description = (rejectEvidenceText || '').trim()
         const url = (rejectEvidenceUrl || '').trim()
-        if (!description && !url) {
-          throw new Error('Evidence is required when rejecting')
+        if (!description && !url && !rejectPdfFile) {
+          throw new Error('Evidence is required when rejecting (provide a description, URL, or PDF report)')
         }
-        evidence = { description: description || null, url: url || null }
+
+        // Upload PDF report if provided
+        if (rejectPdfFile) {
+          setUploadProgress('Uploading rejection report…')
+          const formData = new FormData()
+          formData.append('file', rejectPdfFile)
+          formData.append('flightId', flightId)
+
+          const uploadRes = await fetch('/api/airline/claims/upload-report', {
+            method: 'POST',
+            body: formData,
+          })
+          const uploadData = await uploadRes.json().catch(() => null)
+          if (!uploadRes.ok || !uploadData?.ok) {
+            throw new Error(uploadData?.error || 'Failed to upload rejection report')
+          }
+          rejectionReportPath = uploadData.storagePath
+          setUploadProgress('')
+        }
+
+        evidence = {
+          description: description || null,
+          url: url || null,
+          rejectionReportPath: rejectionReportPath || null,
+        }
         evidenceHash = await sha256Bytes32Hex(JSON.stringify(evidence))
       }
 
-      // 1) Record the decision on-chain (MetaMask)
-      const onChain = await airlineDecideFlight({ flightId, accept, evidenceHash })
+      // 1) Persist decision + evidence in DB first so the dashboard updates immediately
+      let txHash = null
+      let chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 31337)
 
-      // 2) Persist decision + evidence in DB
+      // 2) Attempt on-chain recording with a timeout so it cannot hang forever
+      try {
+        const CHAIN_TIMEOUT_MS = 60_000 // 60 s – enough for MetaMask interaction
+        const onChain = await Promise.race([
+          airlineDecideFlight({ flightId, accept, evidenceHash }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('On-chain call timed out after 60 s')), CHAIN_TIMEOUT_MS)
+          ),
+        ])
+        txHash = onChain.transactionHash
+      } catch (chainErr) {
+        console.warn('On-chain decision skipped/failed (DB will still be updated):', chainErr.message)
+      }
+
+      console.log('[reject] Calling /api/airline/claims/decide with:', { flightId, decision, evidence, rejectionReportPath, txHash })
       const apiRes = await fetch('/api/airline/claims/decide', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -112,21 +155,25 @@ export default function AirlineClaims() {
           flightId,
           decision,
           evidence,
-          txHash: onChain.transactionHash,
-          chainId: Number(process.env.NEXT_PUBLIC_CHAIN_ID || 31337),
+          rejectionReportPath,
+          txHash,
+          chainId,
           contractAddress: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || null,
         }),
       })
 
       const apiData = await apiRes.json().catch(() => null)
+      console.log('[reject] API response:', apiRes.status, apiData)
       if (!apiRes.ok || !apiData?.ok) {
-        throw new Error(apiData?.error || 'On-chain decision succeeded, but DB update failed')
+        throw new Error(apiData?.error || 'DB update failed – check console for details')
       }
 
       setSuccess(`Decision recorded for ${flightId} (${decision}).`)
       setRejectFlightId('')
       setRejectEvidenceText('')
       setRejectEvidenceUrl('')
+      setRejectPdfFile(null)
+      setUploadProgress('')
       await fetchClaims()
     } catch (err) {
       setError(err.message || 'Failed to record decision')
@@ -327,6 +374,11 @@ export default function AirlineClaims() {
           <div className="reject-overlay" onClick={() => setRejectFlightId('')}>
             <div className="reject-card" onClick={(e) => e.stopPropagation()}>
               <h2 style={{ marginTop: 0 }}>Reject Flight: {rejectFlightId}</h2>
+              {error && (
+                <div style={{ background: 'var(--error-bg, #fef2f2)', border: '1px solid var(--error-color, #dc2626)', borderRadius: 'var(--radius-md, 6px)', padding: '0.75rem 1rem', marginBottom: '1rem', color: 'var(--error-color, #dc2626)', fontSize: '0.9rem' }}>
+                  <strong>Error:</strong> {error}
+                </div>
+              )}
               <p style={{ color: 'var(--text-secondary)' }}>
                 Rejection requires evidence. This decision will apply to every passenger on the flight.
               </p>
@@ -340,7 +392,7 @@ export default function AirlineClaims() {
                 />
 
                 <label className="input-label">
-                  Evidence Description (required if no URL)
+                  Evidence Description (required if no URL or PDF)
                   <textarea
                     value={rejectEvidenceText}
                     onChange={(e) => setRejectEvidenceText(e.target.value)}
@@ -349,6 +401,22 @@ export default function AirlineClaims() {
                     rows={4}
                   />
                 </label>
+
+                <label className="input-label">
+                  Rejection Report (PDF, max 10 MB)
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    className="input-field file-input"
+                    onChange={(e) => setRejectPdfFile(e.target.files?.[0] || null)}
+                  />
+                </label>
+                {rejectPdfFile && (
+                  <p className="file-hint">
+                    Selected: {rejectPdfFile.name} ({(rejectPdfFile.size / 1024).toFixed(0)} KB)
+                  </p>
+                )}
+                {uploadProgress && <p className="upload-progress">{uploadProgress}</p>}
 
                 <div style={{ display: 'flex', gap: '8px', marginTop: 'var(--space-md)' }}>
                   <Button
@@ -516,6 +584,16 @@ export default function AirlineClaims() {
           background: var(--bg-secondary); border: 1px solid var(--gray-200);
           border-radius: var(--radius-lg); padding: var(--space-xl);
           max-width: 540px; width: 100%;
+        }
+        .file-input {
+          padding: 0.5rem; cursor: pointer;
+        }
+        .file-hint {
+          font-size: 0.8rem; color: var(--text-muted); margin: 0.25rem 0 0;
+        }
+        .upload-progress {
+          font-size: 0.85rem; color: var(--primary-color); margin: 0.5rem 0 0;
+          font-weight: 500;
         }
 
         @media (max-width: 768px) {

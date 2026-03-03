@@ -41,11 +41,18 @@ export default async function handler(req, res) {
     return res.status(404).json({ ok: false, error: `Flight not found: ${flightId}` })
   }
 
-  // Check if landing already recorded
+  // Check if landing already recorded — still update claim statuses in case
+  // they were missed on the first call (e.g. code was deployed after landing).
   if (flight.actual_arrival_at) {
-    return res.status(409).json({ 
-      ok: false, 
-      error: 'Landing already recorded for this flight' 
+    const existingDelay = flight.delay_minutes || 0
+    if (existingDelay >= 180) {
+      await updateClaimStatuses(supabase, flightId)
+    }
+    return res.status(409).json({
+      ok: false,
+      error: 'Landing already recorded for this flight',
+      delayMinutes: existingDelay,
+      delayed: existingDelay >= 180,
     })
   }
 
@@ -71,6 +78,13 @@ export default async function handler(req, res) {
   // on whether a flight qualifies for compensation (when the oracle reports to it)
   const isDelayed = delayMinutes >= 180
 
+  // If the flight is delayed ≥ 180 min, transition all registered claims
+  // from 'registered' → 'awaiting_decision' so they show up immediately
+  // on the passenger and airline dashboards.
+  if (isDelayed) {
+    await updateClaimStatuses(supabase, flightId)
+  }
+
   return res.status(200).json({
     ok: true,
     flightId,
@@ -79,4 +93,24 @@ export default async function handler(req, res) {
     delayMinutes,
     delayed: isDelayed,
   })
+}
+
+/**
+ * Transition all registered claims on a flight to 'awaiting_decision'.
+ */
+async function updateClaimStatuses(supabase, flightId) {
+  const { data: bookings } = await supabase
+    .from('bookings')
+    .select('booking_ref')
+    .eq('flight_id', flightId)
+
+  const bookingRefs = (bookings || []).map((b) => b.booking_ref).filter(Boolean)
+
+  if (bookingRefs.length > 0) {
+    await supabase
+      .from('registered_flights')
+      .update({ claim_status: 'awaiting_decision' })
+      .in('booking_ref', bookingRefs)
+      .eq('claim_status', 'registered')
+  }
 }

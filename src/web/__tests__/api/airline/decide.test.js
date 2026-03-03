@@ -120,4 +120,27 @@ describe('POST /api/airline/claims/decide', () => {
     expect(data.claimStatus).toBe('rejected')
     expect(data.evidenceHash).toBeDefined()
   })
+
+  test('rejects claims with evidence and rejection report path', async () => {
+    const sb = mockSupabase()
+    sb.forTable('bookings').returnData([{ booking_ref: 'ref-1' }])
+    sb.forTable('registered_flights').returnData([{ booking_ref: 'ref-1' }])
+    sb.forTable('flight_claim_decisions').returnData(null)
+
+    const { req, res } = createMocks({
+      method: 'POST',
+      body: {
+        flightId: 'FL-001',
+        decision: 'rejected',
+        evidence: { description: 'Volcanic ash cloud', url: null },
+        rejectionReportPath: 'FL-001/123456_report.pdf',
+      },
+    })
+    await handler(req, res)
+    expect(res.statusCode).toBe(200)
+    const data = res._getJSONData()
+    expect(data.decision).toBe('rejected')
+    expect(data.rejectionReportPath).toBe('FL-001/123456_report.pdf')
+    expect(data.claimStatus).toBe('rejected')
+  })
 })

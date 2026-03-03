@@ -92,11 +92,54 @@ export default async function handler(req, res) {
 
     if (error) throw error
 
-    const claims = (Array.isArray(rows) ? rows : []).map((r) => ({
-      bookingRef: r.booking_ref,
-      flightId: r?.bookings?.flight_id || null,
-      claimStatus: r.claim_status || 'registered',
-    }))
+    // For rejected claims, look up the rejection report path so passengers
+    // can download the airline's PDF explanation.
+    const rejectedFlightIds = [
+      ...new Set(
+        (Array.isArray(rows) ? rows : [])
+          .filter((r) => r.claim_status === 'rejected')
+          .map((r) => r?.bookings?.flight_id)
+          .filter(Boolean)
+      ),
+    ]
+
+    let decisionMap = {}
+    if (rejectedFlightIds.length > 0) {
+      const { data: decisions, error: decisionsError } = await supabase
+        .from('flight_claim_decisions')
+        .select('flight_id, rejection_report_path, evidence')
+        .in('flight_id', rejectedFlightIds)
+
+      if (!decisionsError && Array.isArray(decisions)) {
+        for (const d of decisions) {
+          // Build a public URL for the report if a path exists
+          let reportUrl = null
+          if (d.rejection_report_path) {
+            const { data: urlData } = supabase.storage
+              .from('rejection-reports')
+              .getPublicUrl(d.rejection_report_path)
+            reportUrl = urlData?.publicUrl || null
+          }
+          decisionMap[d.flight_id] = {
+            rejectionReportPath: d.rejection_report_path || null,
+            rejectionReportUrl: reportUrl,
+            rejectionReason: d.evidence?.description || null,
+          }
+        }
+      }
+    }
+
+    const claims = (Array.isArray(rows) ? rows : []).map((r) => {
+      const flightId = r?.bookings?.flight_id || null
+      const decision = flightId ? decisionMap[flightId] : null
+      return {
+        bookingRef: r.booking_ref,
+        flightId,
+        claimStatus: r.claim_status || 'registered',
+        rejectionReportUrl: decision?.rejectionReportUrl || null,
+        rejectionReason: decision?.rejectionReason || null,
+      }
+    })
 
     return res.status(200).json({ ok: true, claims })
   } catch (err) {

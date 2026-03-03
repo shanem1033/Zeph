@@ -50,7 +50,7 @@ export default function MyClaims() {
     const existingRefs = new Set(existing.map((f) => f.bookingRef))
     const additions = claims
       .filter((c) => !existingRefs.has(c.bookingRef))
-      .map((c) => ({ id: c.bookingRef, bookingRef: c.bookingRef, flightId: c.flightId, claimStatus: c.claimStatus }))
+      .map((c) => ({ id: c.bookingRef, bookingRef: c.bookingRef, flightId: c.flightId, claimStatus: c.claimStatus, rejectionReportUrl: c.rejectionReportUrl || null, rejectionReason: c.rejectionReason || null }))
 
     const nextFlights = [
       ...existing.map((f) => {
@@ -60,6 +60,8 @@ export default function MyClaims() {
           ...f,
           flightId: fresh.flightId || f.flightId,
           claimStatus: fresh.claimStatus || f.claimStatus,
+          rejectionReportUrl: fresh.rejectionReportUrl || f.rejectionReportUrl || null,
+          rejectionReason: fresh.rejectionReason || f.rejectionReason || null,
         }
       }),
       ...additions,
@@ -151,6 +153,7 @@ export default function MyClaims() {
                 <tr>
                   <th>Flight ID</th>
                   <th>Status</th>
+                  <th>Details</th>
                 </tr>
               </thead>
               <tbody>
@@ -167,6 +170,30 @@ export default function MyClaims() {
                         <span className={`status-badge ${status.class}`}>
                           {status.icon} {status.text}
                         </span>
+                      </td>
+                      <td>
+                        {flight.claimStatus === 'rejected' ? (
+                          <div className="rejection-details">
+                            {flight.rejectionReason && (
+                              <p className="rejection-reason">{flight.rejectionReason}</p>
+                            )}
+                            {flight.rejectionReportUrl && (
+                              <a
+                                href={flight.rejectionReportUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="report-link"
+                              >
+                                View Rejection Report (PDF)
+                              </a>
+                            )}
+                            {!flight.rejectionReason && !flight.rejectionReportUrl && (
+                              <span className="no-details">No details provided</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="no-details">—</span>
+                        )}
                       </td>
                     </tr>
                   )
@@ -279,6 +306,38 @@ export default function MyClaims() {
 
           tr:hover {
             background: rgba(255, 255, 255, 0.02);
+          }
+
+          .rejection-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+          }
+
+          .rejection-reason {
+            margin: 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-style: italic;
+          }
+
+          .report-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.8rem;
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 500;
+          }
+
+          .report-link:hover {
+            text-decoration: underline;
+          }
+
+          .no-details {
+            color: var(--text-muted);
+            font-size: 0.85rem;
           }
         `}</style>
       </div>
