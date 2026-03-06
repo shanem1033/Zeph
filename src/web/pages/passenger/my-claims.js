@@ -18,6 +18,7 @@ export default function MyClaims() {
   const [message, setMessage] = useState(null)
   const [activeFilter, setActiveFilter] = useState(DEFAULT_FILTER)
   const [selectedClaim, setSelectedClaim] = useState(null)
+  const [evidenceLoading, setEvidenceLoading] = useState(false)
 
   async function refreshFromServer(currentFlights) {
     const refs = (Array.isArray(currentFlights) ? currentFlights : []).map((f) => f?.bookingRef).filter(Boolean)
@@ -212,6 +213,50 @@ export default function MyClaims() {
     return `${hours}h ${remainingMinutes}m`
   }
 
+  const downloadEvidenceReport = async (claim) => {
+    try {
+      setEvidenceLoading(true)
+      setMessage(null)
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      const token = session?.access_token
+      if (!token) {
+        throw new Error('Not authenticated')
+      }
+
+      const res = await fetch('/api/passenger/claims/evidence', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ bookingRef: claim.bookingRef }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null)
+        throw new Error(errorData?.error || 'Failed to generate evidence report')
+      }
+
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `claim-evidence-${claim.bookingRef}.zip`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || 'Failed to generate evidence report' })
+    } finally {
+      setEvidenceLoading(false)
+    }
+  }
+
   return (
     <PassengerLayout>
       <div className="container">
@@ -383,6 +428,17 @@ export default function MyClaims() {
                     <p>This claim has been accepted by the airline.</p>
                   </div>
                 )}
+
+                <div className="claim-modal-actions">
+                  <button
+                    type="button"
+                    className="evidence-button"
+                    onClick={() => downloadEvidenceReport(selectedClaim)}
+                    disabled={evidenceLoading}
+                  >
+                    {evidenceLoading ? 'Generating…' : 'Download Evidence Report'}
+                  </button>
+                </div>
               </div>
             )
           })()}
@@ -703,6 +759,33 @@ export default function MyClaims() {
             border-color: rgba(34, 197, 94, 0.25);
           }
 
+          .claim-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+          }
+
+          .evidence-button {
+            padding: 0.85rem 1.15rem;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #2563eb, #0ea5e9);
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.28);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+          }
+
+          .evidence-button:hover:enabled {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 30px rgba(37, 99, 235, 0.34);
+          }
+
+          .evidence-button:disabled {
+            cursor: wait;
+            opacity: 0.7;
+          }
+
           @media (max-width: 640px) {
             :global(.modal-content) {
               width: min(96vw, 900px);
@@ -725,6 +808,14 @@ export default function MyClaims() {
 
             .claim-detail-grid {
               grid-template-columns: 1fr;
+            }
+
+            .claim-modal-actions {
+              justify-content: stretch;
+            }
+
+            .evidence-button {
+              width: 100%;
             }
           }
         `}</style>
