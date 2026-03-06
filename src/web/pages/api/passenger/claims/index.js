@@ -92,6 +92,30 @@ export default async function handler(req, res) {
 
     if (error) throw error
 
+    const flightIds = [
+      ...new Set(
+        (Array.isArray(rows) ? rows : [])
+          .map((r) => r?.bookings?.flight_id)
+          .filter(Boolean)
+      ),
+    ]
+
+    let flightMap = {}
+    if (flightIds.length > 0) {
+      const { data: flights, error: flightsError } = await supabase
+        .from('flights')
+        .select(
+          'flight_id, flight_code, origin, destination, scheduled_departure_at, scheduled_arrival_at, actual_arrival_at, delay_minutes'
+        )
+        .in('flight_id', flightIds)
+
+      if (flightsError) throw flightsError
+
+      flightMap = Object.fromEntries(
+        (Array.isArray(flights) ? flights : []).map((flight) => [flight.flight_id, flight])
+      )
+    }
+
     // For rejected claims, look up the rejection report path so passengers
     // can download the airline's PDF explanation.
     const rejectedFlightIds = [
@@ -132,9 +156,17 @@ export default async function handler(req, res) {
     const claims = (Array.isArray(rows) ? rows : []).map((r) => {
       const flightId = r?.bookings?.flight_id || null
       const decision = flightId ? decisionMap[flightId] : null
+      const flight = flightId ? flightMap[flightId] : null
       return {
         bookingRef: r.booking_ref,
         flightId,
+        flightCode: flight?.flight_code || null,
+        origin: flight?.origin || null,
+        destination: flight?.destination || null,
+        scheduledDeparture: flight?.scheduled_departure_at || null,
+        scheduledArrival: flight?.scheduled_arrival_at || null,
+        actualArrival: flight?.actual_arrival_at || null,
+        delayMinutes: flight?.delay_minutes ?? null,
         claimStatus: r.claim_status || 'registered',
         rejectionReportUrl: decision?.rejectionReportUrl || null,
         rejectionReason: decision?.rejectionReason || null,

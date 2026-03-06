@@ -1,11 +1,23 @@
 import { useState, useEffect } from 'react'
 import PassengerLayout from '../../components/layouts/PassengerLayout'
+import Modal from '../../components/modals/Modal'
 import { supabase } from '../../utils/supabaseClient'
+
+const STATUS_FILTERS = [
+  { key: 'registered', label: 'Registered' },
+  { key: 'awaiting_decision', label: 'Awaiting Decision' },
+  { key: 'accepted', label: 'Accepted' },
+  { key: 'rejected', label: 'Rejected' },
+]
+
+const DEFAULT_FILTER = 'default'
 
 export default function MyClaims() {
   const [flights, setFlights] = useState([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState(null)
+  const [activeFilter, setActiveFilter] = useState(DEFAULT_FILTER)
+  const [selectedClaim, setSelectedClaim] = useState(null)
 
   async function refreshFromServer(currentFlights) {
     const refs = (Array.isArray(currentFlights) ? currentFlights : []).map((f) => f?.bookingRef).filter(Boolean)
@@ -50,7 +62,21 @@ export default function MyClaims() {
     const existingRefs = new Set(existing.map((f) => f.bookingRef))
     const additions = claims
       .filter((c) => !existingRefs.has(c.bookingRef))
-      .map((c) => ({ id: c.bookingRef, bookingRef: c.bookingRef, flightId: c.flightId, claimStatus: c.claimStatus, rejectionReportUrl: c.rejectionReportUrl || null, rejectionReason: c.rejectionReason || null }))
+      .map((c) => ({
+        id: c.bookingRef,
+        bookingRef: c.bookingRef,
+        flightId: c.flightId,
+        flightCode: c.flightCode || null,
+        origin: c.origin || null,
+        destination: c.destination || null,
+        scheduledDeparture: c.scheduledDeparture || null,
+        scheduledArrival: c.scheduledArrival || null,
+        actualArrival: c.actualArrival || null,
+        delayMinutes: c.delayMinutes ?? null,
+        claimStatus: c.claimStatus,
+        rejectionReportUrl: c.rejectionReportUrl || null,
+        rejectionReason: c.rejectionReason || null,
+      }))
 
     const nextFlights = [
       ...existing.map((f) => {
@@ -59,6 +85,13 @@ export default function MyClaims() {
         return {
           ...f,
           flightId: fresh.flightId || f.flightId,
+          flightCode: fresh.flightCode || f.flightCode || null,
+          origin: fresh.origin || f.origin || null,
+          destination: fresh.destination || f.destination || null,
+          scheduledDeparture: fresh.scheduledDeparture || f.scheduledDeparture || null,
+          scheduledArrival: fresh.scheduledArrival || f.scheduledArrival || null,
+          actualArrival: fresh.actualArrival || f.actualArrival || null,
+          delayMinutes: fresh.delayMinutes ?? f.delayMinutes ?? null,
           claimStatus: fresh.claimStatus || f.claimStatus,
           rejectionReportUrl: fresh.rejectionReportUrl || f.rejectionReportUrl || null,
           rejectionReason: fresh.rejectionReason || f.rejectionReason || null,
@@ -131,6 +164,54 @@ export default function MyClaims() {
     return statusMap[status] || { text: status || 'Registered', class: 'registered', icon: '•' }
   }
 
+  const filteredFlights = flights.filter((flight) => {
+    if (activeFilter === 'all') return true
+    if (activeFilter === DEFAULT_FILTER) {
+      return ['registered', 'awaiting_decision'].includes(flight?.claimStatus)
+    }
+    return flight?.claimStatus === activeFilter
+  })
+
+  const getEmptyMessage = () => {
+    if (activeFilter === 'all') {
+      return 'No claims found.'
+    }
+
+    if (activeFilter === DEFAULT_FILTER) {
+      return 'No registered or awaiting decision claims right now.'
+    }
+
+    const selected = STATUS_FILTERS.find((status) => status.key === activeFilter)
+    if (selected) {
+      return `No ${selected.label.toLowerCase()} claims right now.`
+    }
+
+    return 'No claims match the selected filters.'
+  }
+
+  const fmtDateTime = (value) => {
+    if (!value) return 'Not available'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return 'Not available'
+    return date.toLocaleString('en-IE', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
+  const fmtDelay = (minutes) => {
+    if (minutes == null) return 'Not available'
+    if (minutes === 0) return '0 minutes'
+    const hours = Math.floor(minutes / 60)
+    const remainingMinutes = minutes % 60
+    if (hours === 0) return `${remainingMinutes} minutes`
+    if (remainingMinutes === 0) return `${hours}h`
+    return `${hours}h ${remainingMinutes}m`
+  }
+
   return (
     <PassengerLayout>
       <div className="container">
@@ -142,10 +223,35 @@ export default function MyClaims() {
           </div>
         )}
 
+        {!loading && flights.length > 0 && (
+          <div className="claims-filters">
+            <button
+              type="button"
+              className={`filter-btn ${activeFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setActiveFilter('all')}
+            >
+              All
+            </button>
+
+            {STATUS_FILTERS.map((filter) => (
+              <button
+                key={filter.key}
+                type="button"
+                className={`filter-btn ${activeFilter === filter.key ? 'active' : ''}`}
+                onClick={() => setActiveFilter(filter.key)}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {loading ? (
           <p>Loading...</p>
         ) : flights.length === 0 ? (
           <p>No registered flights</p>
+        ) : filteredFlights.length === 0 ? (
+          <p>{getEmptyMessage()}</p>
         ) : (
           <div className="flights-table">
             <table>
@@ -153,11 +259,11 @@ export default function MyClaims() {
                 <tr>
                   <th>Flight ID</th>
                   <th>Status</th>
-                  <th>Details</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {flights.map(flight => {
+                {filteredFlights.map(flight => {
                   const status = getStatusDisplay(flight.claimStatus)
                   return (
                     <tr key={flight.id}>
@@ -172,28 +278,13 @@ export default function MyClaims() {
                         </span>
                       </td>
                       <td>
-                        {flight.claimStatus === 'rejected' ? (
-                          <div className="rejection-details">
-                            {flight.rejectionReason && (
-                              <p className="rejection-reason">{flight.rejectionReason}</p>
-                            )}
-                            {flight.rejectionReportUrl && (
-                              <a
-                                href={flight.rejectionReportUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="report-link"
-                              >
-                                View Rejection Report (PDF)
-                              </a>
-                            )}
-                            {!flight.rejectionReason && !flight.rejectionReportUrl && (
-                              <span className="no-details">No details provided</span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="no-details">—</span>
-                        )}
+                        <button
+                          type="button"
+                          className="details-button"
+                          onClick={() => setSelectedClaim(flight)}
+                        >
+                          See details
+                        </button>
                       </td>
                     </tr>
                   )
@@ -203,7 +294,131 @@ export default function MyClaims() {
           </div>
         )}
 
+        <Modal
+          isOpen={Boolean(selectedClaim)}
+          onClose={() => setSelectedClaim(null)}
+          title={selectedClaim ? `Claim Details · ${selectedClaim.flightId}` : 'Claim Details'}
+        >
+          {selectedClaim && (() => {
+            const status = getStatusDisplay(selectedClaim.claimStatus)
+            return (
+              <div className="claim-modal-content">
+                <div className="claim-modal-hero">
+                  <div>
+                    <p className="claim-modal-kicker">Passenger Claim Overview</p>
+                    <h3 className="claim-modal-title">{selectedClaim.flightCode || selectedClaim.flightId}</h3>
+                    <p className="claim-modal-route">
+                      {selectedClaim.origin && selectedClaim.destination
+                        ? `${selectedClaim.origin} → ${selectedClaim.destination}`
+                        : 'Route information not available'}
+                    </p>
+                  </div>
+
+                  <div className="claim-modal-status-row">
+                    <span className={`status-badge ${status.class}`}>
+                      {status.icon} {status.text}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="claim-detail-grid">
+                  <div className="claim-detail-item">
+                    <span className="claim-detail-label">Booking Reference</span>
+                    <strong>{selectedClaim.bookingRef || 'Not available'}</strong>
+                  </div>
+                  <div className="claim-detail-item">
+                    <span className="claim-detail-label">Flight ID</span>
+                    <strong>{selectedClaim.flightId || 'Not available'}</strong>
+                  </div>
+                  <div className="claim-detail-item">
+                    <span className="claim-detail-label">Flight Code</span>
+                    <strong>{selectedClaim.flightCode || 'Not available'}</strong>
+                  </div>
+                  <div className="claim-detail-item">
+                    <span className="claim-detail-label">Route</span>
+                    <strong>
+                      {selectedClaim.origin && selectedClaim.destination
+                        ? `${selectedClaim.origin} → ${selectedClaim.destination}`
+                        : 'Not available'}
+                    </strong>
+                  </div>
+                  <div className="claim-detail-item">
+                    <span className="claim-detail-label">Scheduled Departure</span>
+                    <strong>{fmtDateTime(selectedClaim.scheduledDeparture)}</strong>
+                  </div>
+                  <div className="claim-detail-item">
+                    <span className="claim-detail-label">Scheduled Arrival</span>
+                    <strong>{fmtDateTime(selectedClaim.scheduledArrival)}</strong>
+                  </div>
+                  <div className="claim-detail-item">
+                    <span className="claim-detail-label">Actual Arrival</span>
+                    <strong>{fmtDateTime(selectedClaim.actualArrival)}</strong>
+                  </div>
+                  <div className="claim-detail-item">
+                    <span className="claim-detail-label">Delay</span>
+                    <strong>{fmtDelay(selectedClaim.delayMinutes)}</strong>
+                  </div>
+                </div>
+
+                {selectedClaim.claimStatus === 'rejected' && (
+                  <div className="claim-extra-panel">
+                    <h3>Rejection Details</h3>
+                    <p>{selectedClaim.rejectionReason || 'No rejection reason was provided.'}</p>
+                    {selectedClaim.rejectionReportUrl && (
+                      <a
+                        href={selectedClaim.rejectionReportUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="report-link"
+                      >
+                        View Rejection Report (PDF)
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {selectedClaim.claimStatus === 'accepted' && (
+                  <div className="claim-extra-panel success-panel">
+                    <h3>Claim Outcome</h3>
+                    <p>This claim has been accepted by the airline.</p>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+        </Modal>
+
         <style jsx>{`
+          :global(.modal-content) {
+            width: min(92vw, 900px);
+            max-width: 900px;
+            max-height: 88vh;
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: 0 32px 80px rgba(15, 23, 42, 0.45);
+          }
+
+          :global(.modal-header) {
+            padding: 1.25rem 1.5rem;
+            background:
+              linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(14, 165, 233, 0.04)),
+              var(--bg-secondary);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+          }
+
+          :global(.modal-header h2) {
+            font-size: 1.1rem;
+            letter-spacing: 0.01em;
+          }
+
+          :global(.modal-body) {
+            padding: 1.5rem;
+            background:
+              radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 28%),
+              var(--bg-secondary);
+          }
+
           .container {
             max-width: 600px;
             margin: 2rem auto;
@@ -232,6 +447,51 @@ export default function MyClaims() {
             background: var(--error-bg);
             color: var(--error-color);
             border: 1px solid var(--error-color);
+          }
+
+          .claims-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+          }
+
+          .filter-btn {
+            padding: 0.65rem 1rem;
+            border-radius: 999px;
+            border: 1px solid var(--bg-tertiary);
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+          }
+
+          .filter-btn:hover {
+            border-color: #3b82f6;
+            color: var(--text-primary);
+          }
+
+          .filter-btn.active {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border-color: #3b82f6;
+          }
+
+          .details-button {
+            padding: 0.6rem 0.9rem;
+            border-radius: 8px;
+            border: 1px solid #3b82f6;
+            background: rgba(59, 130, 246, 0.12);
+            color: #60a5fa;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+          }
+
+          .details-button:hover {
+            background: rgba(59, 130, 246, 0.18);
           }
 
           .status-badge {
@@ -338,6 +598,134 @@ export default function MyClaims() {
           .no-details {
             color: var(--text-muted);
             font-size: 0.85rem;
+          }
+
+          .claim-modal-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+          }
+
+          .claim-modal-hero {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1.25rem;
+            border-radius: 18px;
+            background:
+              linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.9)),
+              var(--bg-secondary);
+            border: 1px solid rgba(96, 165, 250, 0.22);
+          }
+
+          .claim-modal-kicker {
+            margin: 0 0 0.35rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #93c5fd;
+          }
+
+          .claim-modal-title {
+            margin: 0;
+            font-size: 1.7rem;
+            line-height: 1.1;
+            color: #f8fafc;
+          }
+
+          .claim-modal-route {
+            margin: 0.45rem 0 0;
+            font-size: 1rem;
+            color: #cbd5e1;
+          }
+
+          .claim-modal-status-row {
+            display: flex;
+            justify-content: flex-start;
+            flex-shrink: 0;
+          }
+
+          .claim-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 1rem;
+          }
+
+          .claim-detail-item {
+            padding: 1rem 1.05rem;
+            border-radius: 14px;
+            border: 1px solid rgba(148, 163, 184, 0.14);
+            background:
+              linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
+              var(--bg-secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          }
+
+          .claim-detail-item strong {
+            color: var(--text-primary);
+            word-break: break-word;
+            font-size: 1rem;
+          }
+
+          .claim-detail-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-muted);
+          }
+
+          .claim-extra-panel {
+            padding: 1.1rem 1.15rem;
+            border-radius: 16px;
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.26);
+          }
+
+          .claim-extra-panel h3 {
+            margin: 0 0 0.5rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+          }
+
+          .claim-extra-panel p {
+            margin: 0;
+            color: var(--text-secondary);
+            line-height: 1.55;
+          }
+
+          .success-panel {
+            background: rgba(34, 197, 94, 0.08);
+            border-color: rgba(34, 197, 94, 0.25);
+          }
+
+          @media (max-width: 640px) {
+            :global(.modal-content) {
+              width: min(96vw, 900px);
+              max-height: 92vh;
+              border-radius: 18px;
+            }
+
+            :global(.modal-body) {
+              padding: 1rem;
+            }
+
+            .claim-modal-hero {
+              flex-direction: column;
+              align-items: flex-start;
+            }
+
+            .claim-modal-title {
+              font-size: 1.35rem;
+            }
+
+            .claim-detail-grid {
+              grid-template-columns: 1fr;
+            }
           }
         `}</style>
       </div>
