@@ -351,14 +351,14 @@ export default function AirlineClaims() {
                   disabled={!!deciding}
                   onClick={() => decide({ flightId: flight.flight_id, decision: 'accepted' })}
                 >
-                  {deciding === flight.flight_id ? 'Processing…' : 'Accept All'}
+                  {deciding === flight.flight_id ? 'Processing…' : 'Accept'}
                 </Button>
                 <Button
                   variant="danger"
                   disabled={!!deciding}
                   onClick={() => setRejectFlightId(flight.flight_id)}
                 >
-                  Reject All
+                  Reject
                 </Button>
               </div>
             )}

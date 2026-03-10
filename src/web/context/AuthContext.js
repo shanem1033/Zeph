@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../utils/supabaseClient'
-import { getRoleFromEmail } from '../utils/auth'
+import { getRoleFromEmail, isAdminEmail } from '../utils/auth'
 
 const AuthContext = createContext()
 
@@ -52,6 +52,7 @@ export function AuthProvider({ children }) {
     isAuthenticated: !!user,
     isPassenger: user?.role === 'passenger',
     isAirline: user?.role === 'airline',
+    isAdmin: isAdminEmail(user?.email),
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

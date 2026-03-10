@@ -51,6 +51,19 @@ export function getAirlineCodeFromEmail(email) {
   return DOMAIN_TO_AIRLINE_CODE[domain] || null
 }
 
+/**
+ * Admin emails are stored in NEXT_PUBLIC_ADMIN_EMAILS as a comma-separated list.
+ * e.g. NEXT_PUBLIC_ADMIN_EMAILS=admin@zeph.com,sean@zeph.com
+ * @param {string} email
+ * @returns {boolean}
+ */
+export function isAdminEmail(email) {
+  if (!email) return false
+  const raw = process.env.NEXT_PUBLIC_ADMIN_EMAILS || ''
+  const adminEmails = raw.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+  return adminEmails.includes(email.toLowerCase())
+}
+
 export function validateCredentials(email, password) {
   if (!email || !password) {
     return { valid: false, error: 'Email and password are required' }
