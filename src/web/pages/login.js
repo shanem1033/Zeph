@@ -6,7 +6,7 @@ import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import Alert from '../components/ui/Alert'
 import { supabase } from '../utils/supabaseClient'
-import { getRoleFromEmail } from '../utils/auth'
+import { getRoleFromEmail, isAdminEmail } from '../utils/auth'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -53,8 +53,10 @@ export default function Login() {
       return
     }
 
-    // Redirect based on role
-    if (role === 'airline') {
+    // Redirect based on role — admin takes priority
+    if (isAdminEmail(email)) {
+      router.push('/admin')
+    } else if (role === 'airline') {
       router.push('/airline/dashboard')
     } else {
       router.push('/passenger/dashboard')
