@@ -3,6 +3,6 @@ import { useRouter } from 'next/router'
 
 export default function Airline() {
   const router = useRouter()
-  useEffect(() => { router.replace('/airline/dashboard') }, [router])
+  useEffect(() => { router.replace('/airline/claims') }, [router])
   return null
 }

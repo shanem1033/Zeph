@@ -8,6 +8,9 @@ import Alert from '../components/ui/Alert'
 import { supabase } from '../utils/supabaseClient'
 import { getRoleFromEmail, isAdminEmail } from '../utils/auth'
 
+const AIRLINE_HOME_ROUTE = '/airline/claims'
+const PASSENGER_HOME_ROUTE = '/passenger/register-flight'
+
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -57,9 +60,9 @@ export default function Login() {
     if (isAdminEmail(email)) {
       router.push('/admin')
     } else if (role === 'airline') {
-      router.push('/airline/dashboard')
+      router.push(AIRLINE_HOME_ROUTE)
     } else {
-      router.push('/passenger/dashboard')
+      router.push(PASSENGER_HOME_ROUTE)
     }
   }
 

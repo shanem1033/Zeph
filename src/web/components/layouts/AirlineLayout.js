@@ -3,6 +3,8 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useAuth } from '../../context/AuthContext'
 
+const AIRLINE_HOME_ROUTE = '/airline/claims'
+
 export default function AirlineLayout({ children }) {
   const { user, loading, logout, isAirline } = useAuth()
   const router = useRouter()
@@ -12,7 +14,7 @@ export default function AirlineLayout({ children }) {
       router.push('/login')
     } else if (!loading && user && !isAirline) {
       // Redirect if logged in but not an airline
-      router.push(user.role === 'passenger' ? '/passenger/dashboard' : '/login')
+      router.push(user.role === 'passenger' ? '/passenger/register-flight' : '/login')
     }
   }, [user, loading, isAirline, router])
 
@@ -23,13 +25,10 @@ export default function AirlineLayout({ children }) {
   return (
     <>
       <nav className="nav">
-        <Link href="/airline/dashboard" className="nav-brand">
+        <Link href={AIRLINE_HOME_ROUTE} className="nav-brand">
           Zeph
         </Link>
         <div className="nav-links">
-          <Link href="/airline/dashboard" className={`nav-link ${router.pathname === '/airline/dashboard' ? 'active' : ''}`}>
-            Dashboard
-          </Link>
           <Link href="/airline/claims" className={`nav-link ${router.pathname === '/airline/claims' ? 'active' : ''}`}>
             Claims
           </Link>

@@ -446,9 +446,11 @@ export default function MyClaims() {
 
         <style jsx>{`
           :global(.modal-content) {
-            width: min(92vw, 900px);
-            max-width: 900px;
+            width: min(94vw, 1120px);
+            max-width: 1120px;
             max-height: 88vh;
+            display: flex;
+            flex-direction: column;
             border-radius: 24px;
             overflow: hidden;
             border: 1px solid rgba(148, 163, 184, 0.2);
@@ -456,7 +458,7 @@ export default function MyClaims() {
           }
 
           :global(.modal-header) {
-            padding: 1.25rem 1.5rem;
+            padding: 1.4rem 1.8rem;
             background:
               linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(14, 165, 233, 0.04)),
               var(--bg-secondary);
@@ -464,26 +466,51 @@ export default function MyClaims() {
           }
 
           :global(.modal-header h2) {
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             letter-spacing: 0.01em;
           }
 
           :global(.modal-body) {
-            padding: 1.5rem;
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(96, 165, 250, 0.45) rgba(15, 23, 42, 0.28);
+            padding: 1.8rem;
             background:
               radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 28%),
               var(--bg-secondary);
           }
 
+          :global(.modal-body::-webkit-scrollbar) {
+            width: 12px;
+          }
+
+          :global(.modal-body::-webkit-scrollbar-track) {
+            background: rgba(15, 23, 42, 0.28);
+            border-left: 1px solid rgba(148, 163, 184, 0.08);
+          }
+
+          :global(.modal-body::-webkit-scrollbar-thumb) {
+            background: linear-gradient(180deg, rgba(59, 130, 246, 0.72), rgba(14, 165, 233, 0.48));
+            border-radius: 999px;
+            border: 2px solid rgba(30, 41, 59, 0.95);
+          }
+
+          :global(.modal-body::-webkit-scrollbar-thumb:hover) {
+            background: linear-gradient(180deg, rgba(96, 165, 250, 0.88), rgba(56, 189, 248, 0.62));
+          }
+
           .container {
-            max-width: 600px;
+            max-width: 1180px;
             margin: 2rem auto;
-            padding: 0 1rem;
+            padding: 0 1.25rem 2rem;
           }
 
           h1 {
             margin-bottom: 2rem;
             color: var(--text-primary);
+            font-size: clamp(2rem, 2.8vw, 2.8rem);
           }
 
           .alert {
@@ -509,16 +536,16 @@ export default function MyClaims() {
             display: flex;
             flex-wrap: wrap;
             gap: 0.75rem;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.75rem;
           }
 
           .filter-btn {
-            padding: 0.65rem 1rem;
+            padding: 0.75rem 1.15rem;
             border-radius: 999px;
             border: 1px solid var(--bg-tertiary);
             background: var(--bg-secondary);
             color: var(--text-secondary);
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -536,12 +563,13 @@ export default function MyClaims() {
           }
 
           .details-button {
-            padding: 0.6rem 0.9rem;
-            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
             border: 1px solid #3b82f6;
             background: rgba(59, 130, 246, 0.12);
             color: #60a5fa;
             font-weight: 600;
+            font-size: 0.95rem;
             cursor: pointer;
             transition: all 0.2s ease;
           }
@@ -552,9 +580,9 @@ export default function MyClaims() {
 
           .status-badge {
             display: inline-block;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
+            padding: 0.4rem 0.7rem;
+            border-radius: 999px;
+            font-size: 0.82rem;
             font-weight: 600;
             white-space: nowrap;
           }
@@ -592,32 +620,38 @@ export default function MyClaims() {
           .flights-table {
             width: 100%;
             overflow-x: auto;
+            border-radius: 18px;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.2);
           }
 
           table {
             width: 100%;
             border-collapse: collapse;
             background: var(--bg-secondary);
-            border-radius: 8px;
+            border-radius: 18px;
             overflow: hidden;
             border: 1px solid var(--bg-tertiary);
+            table-layout: fixed;
           }
 
           thead {
-            background: var(--bg-tertiary);
+            background: linear-gradient(180deg, rgba(59, 130, 246, 0.12), rgba(51, 65, 85, 0.95));
           }
 
           th {
-            padding: 1rem;
+            padding: 1.2rem 1.25rem;
             text-align: left;
             color: var(--text-primary);
             font-weight: 600;
+            font-size: 0.95rem;
           }
 
           td {
-            padding: 1rem;
+            padding: 1.2rem 1.25rem;
             color: var(--text-secondary);
             border-top: 1px solid var(--bg-tertiary);
+            font-size: 0.98rem;
+            vertical-align: middle;
           }
 
           tr:hover {
@@ -659,16 +693,16 @@ export default function MyClaims() {
           .claim-modal-content {
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 1.75rem;
           }
 
           .claim-modal-hero {
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
-            gap: 1rem;
-            padding: 1.25rem;
-            border-radius: 18px;
+            gap: 1.5rem;
+            padding: 1.6rem;
+            border-radius: 22px;
             background:
               linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.9)),
               var(--bg-secondary);
@@ -686,14 +720,14 @@ export default function MyClaims() {
 
           .claim-modal-title {
             margin: 0;
-            font-size: 1.7rem;
+            font-size: clamp(1.9rem, 2.3vw, 2.4rem);
             line-height: 1.1;
             color: #f8fafc;
           }
 
           .claim-modal-route {
             margin: 0.45rem 0 0;
-            font-size: 1rem;
+            font-size: 1.08rem;
             color: #cbd5e1;
           }
 
@@ -705,39 +739,40 @@ export default function MyClaims() {
 
           .claim-detail-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.15rem;
           }
 
           .claim-detail-item {
-            padding: 1rem 1.05rem;
-            border-radius: 14px;
+            padding: 1.2rem 1.25rem;
+            border-radius: 18px;
             border: 1px solid rgba(148, 163, 184, 0.14);
             background:
               linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
               var(--bg-secondary);
             display: flex;
             flex-direction: column;
-            gap: 0.35rem;
+            gap: 0.5rem;
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
           }
 
           .claim-detail-item strong {
             color: var(--text-primary);
             word-break: break-word;
-            font-size: 1rem;
+            font-size: 1.08rem;
+            line-height: 1.45;
           }
 
           .claim-detail-label {
-            font-size: 0.8rem;
+            font-size: 0.83rem;
             text-transform: uppercase;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.08em;
             color: var(--text-muted);
           }
 
           .claim-extra-panel {
-            padding: 1.1rem 1.15rem;
-            border-radius: 16px;
+            padding: 1.35rem 1.4rem;
+            border-radius: 18px;
             background: rgba(239, 68, 68, 0.08);
             border: 1px solid rgba(239, 68, 68, 0.26);
           }
@@ -745,13 +780,14 @@ export default function MyClaims() {
           .claim-extra-panel h3 {
             margin: 0 0 0.5rem;
             color: var(--text-primary);
-            font-size: 1rem;
+            font-size: 1.1rem;
           }
 
           .claim-extra-panel p {
             margin: 0;
             color: var(--text-secondary);
-            line-height: 1.55;
+            line-height: 1.65;
+            font-size: 1rem;
           }
 
           .success-panel {
@@ -762,15 +798,22 @@ export default function MyClaims() {
           .claim-modal-actions {
             display: flex;
             justify-content: flex-end;
+            position: sticky;
+            bottom: -1.8rem;
+            margin-top: auto;
+            padding-top: 1rem;
+            padding-bottom: 0.2rem;
+            background: linear-gradient(180deg, rgba(30, 41, 59, 0), rgba(30, 41, 59, 0.96) 28%);
           }
 
           .evidence-button {
-            padding: 0.85rem 1.15rem;
+            padding: 0.95rem 1.3rem;
             border: none;
-            border-radius: 12px;
+            border-radius: 14px;
             background: linear-gradient(135deg, #2563eb, #0ea5e9);
             color: #fff;
             font-weight: 700;
+            font-size: 0.98rem;
             cursor: pointer;
             box-shadow: 0 10px 25px rgba(37, 99, 235, 0.28);
             transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
@@ -812,6 +855,7 @@ export default function MyClaims() {
 
             .claim-modal-actions {
               justify-content: stretch;
+              bottom: -1rem;
             }
 
             .evidence-button {

@@ -1,5 +1,8 @@
 // Route guard utilities
 
+const AIRLINE_HOME_ROUTE = '/airline/claims'
+const PASSENGER_HOME_ROUTE = '/passenger/register-flight'
+
 export function requireAuth(user) {
   if (!user) {
     return { authorized: false, redirectTo: '/login' }
@@ -12,7 +15,7 @@ export function requirePassenger(user) {
     return { authorized: false, redirectTo: '/login' }
   }
   if (user.role !== 'passenger') {
-    return { authorized: false, redirectTo: '/airline/dashboard' }
+    return { authorized: false, redirectTo: AIRLINE_HOME_ROUTE }
   }
   return { authorized: true }
 }
@@ -22,7 +25,7 @@ export function requireAirline(user) {
     return { authorized: false, redirectTo: '/login' }
   }
   if (user.role !== 'airline') {
-    return { authorized: false, redirectTo: '/passenger/dashboard' }
+    return { authorized: false, redirectTo: PASSENGER_HOME_ROUTE }
   }
   return { authorized: true }
 }

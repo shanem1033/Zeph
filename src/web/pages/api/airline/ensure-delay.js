@@ -2,6 +2,29 @@ import { ethers } from 'ethers'
 import Compensation from '../../../contracts/Compensation.json'
 import { getSupabaseAdmin } from '../../../utils/supabaseServer'
 
+const POLYGON_MIN_PRIORITY_FEE_GWEI = '25'
+
+async function getTransactionOverrides(provider) {
+  const network = await provider.getNetwork()
+  if (Number(network.chainId) !== 137) {
+    return {}
+  }
+
+  const feeData = await provider.getFeeData()
+  const minPriorityFeePerGas = ethers.utils.parseUnits(POLYGON_MIN_PRIORITY_FEE_GWEI, 'gwei')
+  const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas && feeData.maxPriorityFeePerGas.gt(minPriorityFeePerGas)
+    ? feeData.maxPriorityFeePerGas
+    : minPriorityFeePerGas
+
+  let maxFeePerGas = feeData.maxFeePerGas
+  if (!maxFeePerGas || maxFeePerGas.lte(maxPriorityFeePerGas)) {
+    const baseFee = feeData.lastBaseFeePerGas || feeData.gasPrice || minPriorityFeePerGas
+    maxFeePerGas = baseFee.mul(2).add(maxPriorityFeePerGas)
+  }
+
+  return { maxPriorityFeePerGas, maxFeePerGas }
+}
+
 /**
  * POST /api/airline/ensure-delay
  * Body: { flightId: "BA214-2026-02-17-0800" }
@@ -41,6 +64,7 @@ export default async function handler(req, res) {
     const provider = new ethers.providers.JsonRpcProvider(rpcUrl)
     const oracle = new ethers.Wallet(oracleKey, provider)
     const contract = new ethers.Contract(contractAddress, Compensation.abi, oracle)
+    const txOverrides = await getTransactionOverrides(provider)
 
     // Check on-chain flag
     const key = ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['string'], [flightId]))
@@ -72,7 +96,7 @@ export default async function handler(req, res) {
     }
 
     console.log(`[ensure-delay] Reporting delay for ${flightId} (${delayMinutes} min) on-chain…`)
-    const tx = await contract.oracleReportDelay(flightId, delayMinutes)
+    const tx = await contract.oracleReportDelay(flightId, delayMinutes, txOverrides)
     const receipt = await tx.wait()
     console.log(`[ensure-delay] oracleReportDelay tx mined: ${receipt.transactionHash}`)
 

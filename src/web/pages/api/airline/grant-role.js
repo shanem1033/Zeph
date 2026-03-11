@@ -1,6 +1,29 @@
 import { ethers } from 'ethers'
 import Compensation from '../../../contracts/Compensation.json'
 
+const POLYGON_MIN_PRIORITY_FEE_GWEI = '25'
+
+async function getTransactionOverrides(provider) {
+  const network = await provider.getNetwork()
+  if (Number(network.chainId) !== 137) {
+    return {}
+  }
+
+  const feeData = await provider.getFeeData()
+  const minPriorityFeePerGas = ethers.utils.parseUnits(POLYGON_MIN_PRIORITY_FEE_GWEI, 'gwei')
+  const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas && feeData.maxPriorityFeePerGas.gt(minPriorityFeePerGas)
+    ? feeData.maxPriorityFeePerGas
+    : minPriorityFeePerGas
+
+  let maxFeePerGas = feeData.maxFeePerGas
+  if (!maxFeePerGas || maxFeePerGas.lte(maxPriorityFeePerGas)) {
+    const baseFee = feeData.lastBaseFeePerGas || feeData.gasPrice || minPriorityFeePerGas
+    maxFeePerGas = baseFee.mul(2).add(maxPriorityFeePerGas)
+  }
+
+  return { maxPriorityFeePerGas, maxFeePerGas }
+}
+
 /**
  * POST /api/airline/grant-role
  * Body: { address: "0x..." }
@@ -38,6 +61,7 @@ export default async function handler(req, res) {
   try {
     const provider = new ethers.providers.JsonRpcProvider(rpcUrl)
     const admin = new ethers.Wallet(adminKey, provider)
+    const txOverrides = await getTransactionOverrides(provider)
 
     console.log('[grant-role] admin address:', admin.address)
     console.log('[grant-role] contract address:', contractAddress)
@@ -64,7 +88,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, alreadyGranted: true })
     }
 
-    const tx = await contract.grantRole(airlineRole, address)
+    const tx = await contract.grantRole(airlineRole, address, txOverrides)
     const receipt = await tx.wait()
     console.log('[grant-role] grantRole tx mined:', receipt.transactionHash)
 
