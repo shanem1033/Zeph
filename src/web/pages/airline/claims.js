@@ -129,23 +129,24 @@ export default function AirlineClaims() {
         evidenceHash = await sha256Bytes32Hex(JSON.stringify(evidence))
       }
 
-      // 1) Persist decision + evidence in DB first so the dashboard updates immediately
+      // Require the on-chain airline decision to succeed before persisting it in the DB.
       let txHash = null
-      let chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 31337)
+      let chainId = null
+      let contractAddress = null
+      let decidedByWallet = null
 
-      // 2) Attempt on-chain recording with a timeout so it cannot hang forever
-      try {
-        const CHAIN_TIMEOUT_MS = 60_000 // 60 s – enough for MetaMask interaction
-        const onChain = await Promise.race([
-          airlineDecideFlight({ flightId, accept, evidenceHash }),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('On-chain call timed out after 60 s')), CHAIN_TIMEOUT_MS)
-          ),
-        ])
-        txHash = onChain.transactionHash
-      } catch (chainErr) {
-        console.warn('On-chain decision skipped/failed (DB will still be updated):', chainErr.message)
-      }
+      const CHAIN_TIMEOUT_MS = 60_000 // 60 s – enough for MetaMask interaction
+      const onChain = await Promise.race([
+        airlineDecideFlight({ flightId, accept, evidenceHash }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('On-chain call timed out after 60 s')), CHAIN_TIMEOUT_MS)
+        ),
+      ])
+
+      txHash = onChain.transactionHash
+      chainId = onChain.chainId
+      contractAddress = onChain.contractAddress
+      decidedByWallet = onChain.decidedByWallet
 
       console.log('[reject] Calling /api/airline/claims/decide with:', { flightId, decision, evidence, rejectionReportPath, txHash })
       const apiRes = await fetch('/api/airline/claims/decide', {
@@ -158,7 +159,8 @@ export default function AirlineClaims() {
           rejectionReportPath,
           txHash,
           chainId,
-          contractAddress: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || null,
+          contractAddress,
+          decidedByWallet,
         }),
       })
 

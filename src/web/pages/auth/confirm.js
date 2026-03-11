@@ -3,6 +3,9 @@ import { useRouter } from 'next/router'
 import { supabase } from '../../utils/supabaseClient'
 import PublicLayout from '../../components/layouts/PublicLayout'
 
+const AIRLINE_HOME_ROUTE = '/airline/claims'
+const PASSENGER_HOME_ROUTE = '/passenger/register-flight'
+
 export default function ConfirmEmail() {
     const router = useRouter()
     const [status, setStatus] = useState('Verifying your email...')
@@ -19,7 +22,7 @@ export default function ConfirmEmail() {
                     setStatus('Email confirmed! Redirecting...')
                     const role = session.user?.user_metadata?.role || 'passenger'
                     setTimeout(() => {
-                        router.push(role === 'airline' ? '/airline/dashboard' : '/passenger/dashboard')
+                        router.push(role === 'airline' ? AIRLINE_HOME_ROUTE : PASSENGER_HOME_ROUTE)
                     }, 2000)
                 }
             }
@@ -31,7 +34,7 @@ export default function ConfirmEmail() {
                 setStatus('Email confirmed! Redirecting...')
                 const role = session.user?.user_metadata?.role || 'passenger'
                 setTimeout(() => {
-                    router.push(role === 'airline' ? '/airline/dashboard' : '/passenger/dashboard')
+                    router.push(role === 'airline' ? AIRLINE_HOME_ROUTE : PASSENGER_HOME_ROUTE)
                 }, 2000)
             } else {
                 // Give a few seconds for the hash fragment to be processed

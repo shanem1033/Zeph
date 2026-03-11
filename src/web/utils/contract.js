@@ -3,6 +3,7 @@ import Compensation from '../contracts/Compensation.json'
 
 const DEFAULT_CHAIN_ID = 137
 const DEFAULT_CONTRACT_ADDRESS = ""
+const POLYGON_MIN_PRIORITY_FEE_GWEI = '25'
 
 function getExpectedChainId() {
   const fromEnv = process.env.NEXT_PUBLIC_CHAIN_ID
@@ -130,13 +131,41 @@ export async function getContract(signer) {
   return new ethers.Contract(getContractAddress(), CONTRACT_ABI, signer)
 }
 
+async function getTransactionOverrides(signer) {
+  const provider = signer.provider
+  const network = await provider.getNetwork()
+
+  if (Number(network.chainId) !== 137) {
+    return {}
+  }
+
+  const feeData = await provider.getFeeData()
+  const minPriorityFeePerGas = ethers.utils.parseUnits(POLYGON_MIN_PRIORITY_FEE_GWEI, 'gwei')
+
+  const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas && feeData.maxPriorityFeePerGas.gt(minPriorityFeePerGas)
+    ? feeData.maxPriorityFeePerGas
+    : minPriorityFeePerGas
+
+  let maxFeePerGas = feeData.maxFeePerGas
+  if (!maxFeePerGas || maxFeePerGas.lte(maxPriorityFeePerGas)) {
+    const baseFee = feeData.lastBaseFeePerGas || feeData.gasPrice || minPriorityFeePerGas
+    maxFeePerGas = baseFee.mul(2).add(maxPriorityFeePerGas)
+  }
+
+  return {
+    maxPriorityFeePerGas,
+    maxFeePerGas,
+  }
+}
+
 export async function registerFlight(flightId) {
   try {
     const { signer } = await connectWallet()
     const contract = await getContract(signer)
+    const overrides = await getTransactionOverrides(signer)
 
     // Call the smart contract function
-    const tx = await contract.registerFlight(flightId)
+    const tx = await contract.registerFlight(flightId, overrides)
 
     // Wait for transaction to be mined
     const receipt = await tx.wait()
@@ -160,6 +189,12 @@ export async function registerFlight(flightId) {
       )
     }
 
+    if (/gas price below minimum/i.test(error.message || '')) {
+      throw new Error(
+        'Polygon rejected the transaction because the gas tip was too low. Please retry; the app now requests a higher Polygon fee.'
+      )
+    }
+
     if (error.message.includes('Already registered')) {
       throw new Error('This flight has already been registered')
     }
@@ -172,29 +207,30 @@ export async function airlineDecideFlight({ flightId, accept, evidenceHash }) {
   try {
     const { signer } = await connectWallet()
     const contract = await getContract(signer)
+    const walletAddress = await signer.getAddress()
+    const network = await signer.provider.getNetwork()
 
     // Fail fast with a clearer error if the connected wallet cannot call airline-only methods.
-    const caller = await signer.getAddress()
     const airlineRole = await contract.AIRLINE_ROLE()
-    let hasAirlineRole = await contract.hasRole(airlineRole, caller)
+    let hasAirlineRole = await contract.hasRole(airlineRole, walletAddress)
 
     // Auto-grant AIRLINE_ROLE via the server-side admin key so the airline
     // operator never has to run a manual CLI command.
     if (!hasAirlineRole) {
       console.log('[contract] Wallet missing AIRLINE_ROLE – requesting auto-grant…')
       console.log('[contract] contract address:', contract.address)
-      console.log('[contract] caller:', caller)
+      console.log('[contract] caller:', walletAddress)
       const grantRes = await fetch('/api/airline/grant-role', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: caller }),
+        body: JSON.stringify({ address: walletAddress }),
       })
       const grantData = await grantRes.json().catch(() => null)
       console.log('[contract] grant-role API response:', grantData)
       if (!grantRes.ok || !grantData?.ok) {
         throw new Error(
           grantData?.error ||
-          `Your connected wallet (${caller}) does not have AIRLINE_ROLE and auto-grant failed.`
+          `Your connected wallet (${walletAddress}) does not have AIRLINE_ROLE and auto-grant failed.`
         )
       }
       console.log('[contract] AIRLINE_ROLE granted successfully, proceeding with transaction.')
@@ -219,10 +255,17 @@ export async function airlineDecideFlight({ flightId, accept, evidenceHash }) {
     }
 
     const hash = evidenceHash || ethers.constants.HashZero
-    const tx = await contract.airlineDecideFlight(flightId, Boolean(accept), hash)
+    const overrides = await getTransactionOverrides(signer)
+    const tx = await contract.airlineDecideFlight(flightId, Boolean(accept), hash, overrides)
     const receipt = await tx.wait()
 
-    return { success: true, transactionHash: receipt.transactionHash }
+    return {
+      success: true,
+      transactionHash: receipt.transactionHash,
+      decidedByWallet: walletAddress,
+      chainId: Number(network.chainId),
+      contractAddress: contract.address,
+    }
   } catch (error) {
     console.error('Error recording airline decision:', error)
     if (error.code === 'ACTION_REJECTED') {
@@ -241,6 +284,11 @@ export async function airlineDecideFlight({ flightId, accept, evidenceHash }) {
         'Your connected wallet does not have AIRLINE_ROLE on this contract. ' +
           'Either switch MetaMask to the airline account used during deployment, or grant the role to your wallet: ' +
           '`TARGET_ADDRESS=0xYourWalletAddress npm run grant:airline`'
+      )
+    }
+    if (/gas price below minimum/i.test(message)) {
+      throw new Error(
+        'Polygon rejected the airline decision transaction because the gas tip was too low. Please retry; the app now requests a higher Polygon fee.'
       )
     }
     throw new Error(error.message || 'Failed to record airline decision')

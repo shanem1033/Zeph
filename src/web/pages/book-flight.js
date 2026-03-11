@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
+function fallbackCopyText(text) {
+  const textArea = document.createElement('textarea')
+  textArea.value = text
+  textArea.setAttribute('readonly', '')
+  textArea.style.position = 'absolute'
+  textArea.style.left = '-9999px'
+  document.body.appendChild(textArea)
+  textArea.select()
+  document.execCommand('copy')
+  document.body.removeChild(textArea)
+}
 
 export default function BookFlight() {
   const [formData, setFormData] = useState({
@@ -19,11 +30,14 @@ export default function BookFlight() {
   const [bookingReference, setBookingReference] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
+  const [copyState, setCopyState] = useState('idle')
 
   const closeButtonRef = useRef(null)
 
   useEffect(() => {
     if (!isConfirmationOpen) return
+
+    setCopyState('idle')
 
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -103,6 +117,22 @@ export default function BookFlight() {
       phone: '',
     })
     setBookingReference(null)
+    setCopyState('idle')
+  }
+
+  const handleCopyBookingReference = async () => {
+    if (!bookingReference) return
+
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(bookingReference)
+      } else {
+        fallbackCopyText(bookingReference)
+      }
+      setCopyState('copied')
+    } catch {
+      setCopyState('error')
+    }
   }
 
   const airlines = ['Ryanair', 'EasyJet', 'Lufthansa', 'Air France', 'Iberia']
@@ -116,7 +146,6 @@ export default function BookFlight() {
             <button className="back-button">← Back to Zeph</button>
           </Link>
           <h1 className="booking-title"> Book Your Flight</h1>
-          <p className="booking-subtitle">Book your flight and get a digital ticket with QR code verification</p>
         </div>
       </div>
 
@@ -298,14 +327,26 @@ export default function BookFlight() {
           <div className="booking-modal-card">
             <div className="success-icon">✓</div>
             <h2 id="booking-confirmation-title">Booked successfully</h2>
-            <p className="booking-ref">
-              Your booking has been created. We’ll add the full details here next.
+            <p className="booking-ref booking-ref-intro">
+              Copy this booking reference now. You will need it to register your flight later.
             </p>
 
             <div className="booking-ref-box">
               <span>Booking reference</span>
               <strong>{bookingReference}</strong>
+              <button
+                type="button"
+                className="booking-copy-button"
+                onClick={handleCopyBookingReference}
+              >
+                {copyState === 'copied' ? 'Copied' : 'Copy reference'}
+              </button>
             </div>
+
+            <p className={`booking-copy-feedback ${copyState === 'error' ? 'error' : ''}`} aria-live="polite">
+              {copyState === 'copied' && 'Booking reference copied to your clipboard.'}
+              {copyState === 'error' && 'Copy failed. Please copy the booking reference manually.'}
+            </p>
 
             <div className="modal-actions">
               <button

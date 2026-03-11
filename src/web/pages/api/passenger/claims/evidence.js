@@ -31,6 +31,13 @@ function stableStringify(value) {
   return `{${keys.map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`
 }
 
+function withOptionalFields(base, optional) {
+  return Object.fromEntries([
+    ...Object.entries(base),
+    ...Object.entries(optional).filter(([, value]) => value != null),
+  ])
+}
+
 function createPdfBuffer(report) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: 50, size: 'A4' })
@@ -79,11 +86,20 @@ function createPdfBuffer(report) {
       ['Chain ID', String(report.blockchain.chainId || 'Not recorded')],
       ['Registration tx hash', report.blockchain.registrationTxHash || 'Not recorded'],
       ['Oracle tx hash', report.blockchain.oracleTxHash || 'Not recorded'],
-      ['Decision tx hash', report.blockchain.decisionTxHash || 'Not recorded'],
-      ['Registered by wallet', report.blockchain.registeredByWallet || 'Not recorded'],
-      ['Decided by wallet', report.blockchain.decidedByWallet || 'Not recorded'],
       ['Airline evidence hash', report.claim.evidenceHash || 'Not recorded'],
     ]
+
+    if (report.blockchain.decisionTxHash) {
+      chainRows.push(['Decision tx hash', report.blockchain.decisionTxHash])
+    }
+
+    if (report.blockchain.registeredByWallet) {
+      chainRows.push(['Registered by wallet', report.blockchain.registeredByWallet])
+    }
+
+    if (report.blockchain.decidedByWallet) {
+      chainRows.push(['Decided by wallet', report.blockchain.decidedByWallet])
+    }
 
     for (const [label, value] of chainRows) {
       doc.font('Helvetica-Bold').fontSize(10).fillColor('#1f2937').text(`${label}: `, { continued: true })
@@ -98,8 +114,8 @@ function createPdfBuffer(report) {
       doc.font('Helvetica').fillColor('#334155').text(report.documents.airlineRejectionReport.fileName)
       doc.font('Helvetica-Bold').fillColor('#1f2937').text('Storage path: ', { continued: true })
       doc.font('Helvetica').fillColor('#334155').text(report.documents.airlineRejectionReport.storagePath)
-      doc.font('Helvetica-Bold').fillColor('#1f2937').text('SHA-256: ', { continued: true })
-      doc.font('Helvetica').fillColor('#334155').text(report.documents.airlineRejectionReport.sha256)
+      doc.font('Helvetica-Bold').fillColor('#1f2937').text('Airline report file SHA-256: ', { continued: true })
+      doc.font('Helvetica').fillColor('#334155').text(report.documents.airlineRejectionReport.fileSha256)
     }
 
     doc.moveDown()
@@ -204,11 +220,11 @@ export default async function handler(req, res) {
         fileName,
         storagePath: decision.rejection_report_path,
         buffer: reportBuffer,
-        sha256: bufferSha256Hex(reportBuffer),
+        fileSha256: bufferSha256Hex(reportBuffer),
       }
     }
 
-    const evidencePayload = {
+    const evidencePayload = withOptionalFields({
       bookingRef: booking.booking_ref,
       passengerEmail: booking.passenger_email,
       passengerName: booking.passenger_name || null,
@@ -232,13 +248,16 @@ export default async function handler(req, res) {
       decisionTxHash: decision?.tx_hash || null,
       decisionChainId: decision?.chain_id ?? null,
       decisionContractAddress: decision?.contract_address || null,
-      decidedByWallet: decision?.decided_by_wallet || null,
       decidedAt: decision?.decided_at || null,
       evidenceHash: decision?.evidence_hash || null,
       rejectionReason: decision?.evidence?.description || null,
       rejectionReportPath: decision?.rejection_report_path || null,
-      rejectionReportSha256: airlineReport?.sha256 || null,
-    }
+      rejectionReportFileSha256: airlineReport?.fileSha256 || null,
+    }, {
+      registeredByWallet: registration.registered_by_wallet || null,
+      decisionTxHash: decision?.tx_hash || null,
+      decidedByWallet: decision?.decided_by_wallet || null,
+    })
 
     const evidencePayloadSha256 = sha256Hex(stableStringify(evidencePayload))
     const generatedAt = new Date().toISOString()
@@ -271,21 +290,22 @@ export default async function handler(req, res) {
         evidenceHash: decision?.evidence_hash || null,
         rejectionReason: decision?.evidence?.description || null,
       },
-      blockchain: {
+      blockchain: withOptionalFields({
         chainId: decision?.chain_id ?? registration.chain_id ?? null,
         contractAddress: decision?.contract_address || registration.contract_address || null,
         registrationTxHash: registration.tx_hash || null,
         oracleTxHash: flight.oracle_tx_hash || null,
+      }, {
         decisionTxHash: decision?.tx_hash || null,
         registeredByWallet: registration.registered_by_wallet || null,
         decidedByWallet: decision?.decided_by_wallet || null,
-      },
+      }),
       documents: {
         airlineRejectionReport: airlineReport
           ? {
               fileName: airlineReport.fileName,
               storagePath: airlineReport.storagePath,
-              sha256: airlineReport.sha256,
+              fileSha256: airlineReport.fileSha256,
               includedInZip: true,
             }
           : null,
@@ -316,21 +336,22 @@ export default async function handler(req, res) {
         rejectionReason: decision?.evidence?.description || null,
         evidenceHash: decision?.evidence_hash || null,
       },
-      blockchain: {
+      blockchain: withOptionalFields({
         contractAddress: decision?.contract_address || registration.contract_address || null,
         chainId: decision?.chain_id ?? registration.chain_id ?? null,
         registrationTxHash: registration.tx_hash || null,
         oracleTxHash: flight.oracle_tx_hash || null,
+      }, {
         decisionTxHash: decision?.tx_hash || null,
         registeredByWallet: registration.registered_by_wallet || null,
         decidedByWallet: decision?.decided_by_wallet || null,
-      },
+      }),
       documents: {
         airlineRejectionReport: airlineReport
           ? {
               fileName: airlineReport.fileName,
               storagePath: airlineReport.storagePath,
-              sha256: airlineReport.sha256,
+              fileSha256: airlineReport.fileSha256,
             }
           : null,
       },

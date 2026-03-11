@@ -3,6 +3,8 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useAuth } from '../../context/AuthContext'
 
+const PASSENGER_HOME_ROUTE = '/passenger/register-flight'
+
 export default function PassengerLayout({ children }) {
   const { user, loading, logout, isPassenger } = useAuth()
   const router = useRouter()
@@ -12,7 +14,7 @@ export default function PassengerLayout({ children }) {
       router.push('/login')
     } else if (!loading && user && !isPassenger) {
       // Redirect if logged in but not a passenger
-      router.push(user.role === 'airline' ? '/airline/dashboard' : '/login')
+      router.push(user.role === 'airline' ? '/airline/claims' : '/login')
     }
   }, [user, loading, isPassenger, router])
 
@@ -23,13 +25,10 @@ export default function PassengerLayout({ children }) {
   return (
     <>
       <nav className="nav">
-        <Link href="/passenger/dashboard" className="nav-brand">
+        <Link href={PASSENGER_HOME_ROUTE} className="nav-brand">
           Zeph
         </Link>
         <div className="nav-links">
-          <Link href="/passenger/dashboard" className={`nav-link ${router.pathname === '/passenger/dashboard' ? 'active' : ''}`}>
-            Dashboard
-          </Link>
           <Link href="/passenger/register-flight" className={`nav-link ${router.pathname === '/passenger/register-flight' ? 'active' : ''}`}>
             Register Flight
           </Link>
