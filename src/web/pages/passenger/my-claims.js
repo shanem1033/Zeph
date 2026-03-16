@@ -161,6 +161,7 @@ export default function MyClaims() {
       'awaiting_decision': { text: 'Awaiting Decision', class: 'awaiting', icon: '⏳' },
       'rejected': { text: 'Rejected', class: 'rejected', icon: '✗' },
       'accepted': { text: 'Accepted', class: 'accepted', icon: '✓' },
+      'auto_accepted': { text: 'Auto-Accepted', class: 'auto-accepted', icon: '✓' },
     }
     return statusMap[status] || { text: status || 'Registered', class: 'registered', icon: '•' }
   }
@@ -429,6 +430,13 @@ export default function MyClaims() {
                   </div>
                 )}
 
+                {selectedClaim.claimStatus === 'auto_accepted' && (
+                  <div className="claim-extra-panel auto-accepted-panel">
+                    <h3>Claim Auto-Accepted</h3>
+                    <p>The airline did not respond to this claim within the 7-day review window. Your claim has been automatically accepted.</p>
+                  </div>
+                )}
+
                 <div className="claim-modal-actions">
                   <button
                     type="button"
@@ -617,6 +625,12 @@ export default function MyClaims() {
             border: 1px solid #22c55e;
           }
 
+          .status-badge.auto-accepted {
+            background: rgba(14, 165, 233, 0.2);
+            color: #0ea5e9;
+            border: 1px solid #0ea5e9;
+          }
+
           .flights-table {
             width: 100%;
             overflow-x: auto;
@@ -793,6 +807,11 @@ export default function MyClaims() {
           .success-panel {
             background: rgba(34, 197, 94, 0.08);
             border-color: rgba(34, 197, 94, 0.25);
+          }
+
+          .auto-accepted-panel {
+            background: rgba(14, 165, 233, 0.08);
+            border-color: rgba(14, 165, 233, 0.25);
           }
 
           .claim-modal-actions {

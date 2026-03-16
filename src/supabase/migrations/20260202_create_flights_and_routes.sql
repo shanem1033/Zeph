@@ -60,7 +60,7 @@ create index if not exists flights_oracle_pending_idx
 --   accepted          = airline accepted, compensation owed
 alter table public.registered_flights 
   add column if not exists claim_status text default 'registered'
-  check (claim_status in ('registered', 'landed_on_time', 'awaiting_decision', 'rejected', 'accepted'));
+  check (claim_status in ('registered', 'landed_on_time', 'awaiting_decision', 'rejected', 'accepted', 'auto_accepted'));
 
 create index if not exists registered_flights_claim_status_idx
   on public.registered_flights (claim_status);

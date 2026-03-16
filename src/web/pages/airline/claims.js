@@ -21,6 +21,7 @@ function badge(status) {
   const map = {
     awaiting_decision: { label: 'Awaiting Decision', cls: 'badge-warning' },
     accepted: { label: 'Accepted', cls: 'badge-success' },
+    auto_accepted: { label: 'Auto-Accepted', cls: 'badge-auto' },
     rejected: { label: 'Rejected', cls: 'badge-error' },
     registered: { label: 'Registered', cls: 'badge-info' },
     landed_on_time: { label: 'On Time', cls: 'badge-muted' },
@@ -191,7 +192,7 @@ export default function AirlineClaims() {
       const passengers = flight.passengers.filter((p) => {
         const cs = p.registration?.claim_status
         if (filter === 'awaiting') return cs === 'awaiting_decision'
-        if (filter === 'accepted') return cs === 'accepted'
+        if (filter === 'accepted') return cs === 'accepted' || cs === 'auto_accepted'
         if (filter === 'rejected') return cs === 'rejected'
         return true
       })
@@ -204,7 +205,7 @@ export default function AirlineClaims() {
   const stats = {
     total: allPassengers.length,
     awaiting: allPassengers.filter((p) => p.registration?.claim_status === 'awaiting_decision').length,
-    accepted: allPassengers.filter((p) => p.registration?.claim_status === 'accepted').length,
+    accepted: allPassengers.filter((p) => ['accepted', 'auto_accepted'].includes(p.registration?.claim_status)).length,
     rejected: allPassengers.filter((p) => p.registration?.claim_status === 'rejected').length,
     delayedFlights: claims.length,
   }
@@ -559,6 +560,7 @@ export default function AirlineClaims() {
         .badge-success { background: var(--success-bg); color: var(--success-color); }
         .badge-error   { background: var(--error-bg);   color: var(--error-color); }
         .badge-info    { background: var(--info-bg);     color: var(--info-color); }
+        .badge-auto    { background: rgba(14, 165, 233, 0.15); color: #0ea5e9; }
         .badge-muted   { background: var(--gray-200);    color: var(--text-muted); }
 
         /* ── Flight-level actions ── */
