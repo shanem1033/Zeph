@@ -12,6 +12,7 @@ function fmtDate(iso) {
 
 export default function AdminFlightControl() {
     const [flights, setFlights] = useState([])
+    const [flightSearch, setFlightSearch] = useState('')
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const [success, setSuccess] = useState('')
@@ -19,6 +20,11 @@ export default function AdminFlightControl() {
     // Per-row delay state: { [flightId]: delayMinutes string }
     const [delayInputs, setDelayInputs] = useState({})
     const [submitting, setSubmitting] = useState(null) // flightId currently being submitted
+
+    const normalizedFlightSearch = flightSearch.trim().toLowerCase()
+    const filteredFlights = normalizedFlightSearch
+        ? flights.filter((flight) => (flight.flight_id || '').toLowerCase().includes(normalizedFlightSearch))
+        : flights
 
     const fetchFlights = useCallback(async () => {
         setLoading(true)
@@ -113,6 +119,18 @@ export default function AdminFlightControl() {
                     Arrivals ≥ 180 min late will automatically move registered passenger claims to <em>Awaiting Decision</em>.
                 </div>
 
+                <div className="search-panel">
+                    <label className="search-label" htmlFor="flight-search">Search by full flight ID</label>
+                    <input
+                        id="flight-search"
+                        type="text"
+                        className="search-input"
+                        placeholder="e.g. BA962-2026-03-01-0800"
+                        value={flightSearch}
+                        onChange={(e) => setFlightSearch(e.target.value)}
+                    />
+                </div>
+
                 {/* Table */}
                 {loading ? (
                     <div className="admin-loading">Loading active flights…</div>
@@ -122,12 +140,18 @@ export default function AdminFlightControl() {
                         <h3>No active flights</h3>
                         <p>All flights have already landed, or no flights exist in the system.</p>
                     </div>
+                ) : filteredFlights.length === 0 ? (
+                    <div className="admin-empty">
+                        <div className="empty-icon">🔎</div>
+                        <h3>No matching flights</h3>
+                        <p>No active flights match the full flight ID "{flightSearch.trim()}".</p>
+                    </div>
                 ) : (
                     <div className="table-wrap">
                         <table className="flights-table">
                             <thead>
                                 <tr>
-                                    <th>Flight</th>
+                                    <th>Flight ID</th>
                                     <th>Route</th>
                                     <th>Sched. Departure</th>
                                     <th>Sched. Arrival</th>
@@ -136,11 +160,11 @@ export default function AdminFlightControl() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {flights.map((f) => (
+                                {filteredFlights.map((f) => (
                                     <tr key={f.flight_id}>
                                         <td>
-                                            <div className="flight-code">{f.flight_code}</div>
-                                            <div className="flight-id-small">{f.flight_id}</div>
+                                            <div className="flight-id">{f.flight_id}</div>
+                                            <div className="flight-code-small">{f.flight_code}</div>
                                         </td>
                                         <td className="route-cell">
                                             {f.origin} <span className="arrow">→</span> {f.destination}
@@ -245,6 +269,32 @@ export default function AdminFlightControl() {
         }
         .info-icon { font-style: normal; font-size: 1rem; margin-top: 1px; color: #e94560; }
 
+        .search-panel {
+          margin-bottom: 1rem;
+        }
+        .search-label {
+          display: block;
+          margin-bottom: 0.4rem;
+          color: var(--text-secondary, #6b7280);
+          font-size: 0.875rem;
+          font-weight: 600;
+        }
+        .search-input {
+          width: 100%;
+          max-width: 420px;
+          padding: 0.7rem 0.9rem;
+          border: 1px solid var(--gray-300, #d1d5db);
+          border-radius: var(--radius-md, 6px);
+          font-size: 0.95rem;
+          background: var(--bg-primary, #fff);
+          color: var(--text-primary);
+        }
+        .search-input:focus {
+          outline: none;
+          border-color: #e94560;
+          box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.15);
+        }
+
         /* Loading / empty */
         .admin-loading {
           text-align: center;
@@ -291,15 +341,15 @@ export default function AdminFlightControl() {
         .flights-table tbody tr:last-child td { border-bottom: none; }
         .flights-table tbody tr:hover { background: var(--bg-tertiary, #f9fafb); }
 
-        .flight-code {
+        .flight-id {
           font-weight: 700;
           font-size: 1rem;
           color: var(--text-primary);
+          font-family: monospace;
         }
-        .flight-id-small {
+        .flight-code-small {
           font-size: 0.75rem;
           color: var(--text-muted);
-          font-family: monospace;
           margin-top: 2px;
         }
         .route-cell { white-space: nowrap; }
