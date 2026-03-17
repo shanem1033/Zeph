@@ -75,6 +75,10 @@ export default function MyClaims() {
         actualArrival: c.actualArrival || null,
         delayMinutes: c.delayMinutes ?? null,
         claimStatus: c.claimStatus,
+        isPaid: !!c.isPaid,
+        paymentAmountEur: c.paymentAmountEur ?? null,
+        paymentCreditedAt: c.paymentCreditedAt || null,
+        paymentSourceStatus: c.paymentSourceStatus || null,
         rejectionReportUrl: c.rejectionReportUrl || null,
         rejectionReason: c.rejectionReason || null,
       }))
@@ -94,6 +98,10 @@ export default function MyClaims() {
           actualArrival: fresh.actualArrival || f.actualArrival || null,
           delayMinutes: fresh.delayMinutes ?? f.delayMinutes ?? null,
           claimStatus: fresh.claimStatus || f.claimStatus,
+          isPaid: fresh.isPaid ?? f.isPaid ?? false,
+          paymentAmountEur: fresh.paymentAmountEur ?? f.paymentAmountEur ?? null,
+          paymentCreditedAt: fresh.paymentCreditedAt || f.paymentCreditedAt || null,
+          paymentSourceStatus: fresh.paymentSourceStatus || f.paymentSourceStatus || null,
           rejectionReportUrl: fresh.rejectionReportUrl || f.rejectionReportUrl || null,
           rejectionReason: fresh.rejectionReason || f.rejectionReason || null,
         }
@@ -214,6 +222,16 @@ export default function MyClaims() {
     return `${hours}h ${remainingMinutes}m`
   }
 
+  const getPaymentLabel = (claim) => {
+    if (claim?.isPaid && claim?.paymentAmountEur) {
+      return `Credited €${claim.paymentAmountEur}`
+    }
+    if (['accepted', 'auto_accepted'].includes(claim?.claimStatus)) {
+      return 'Credit pending'
+    }
+    return 'Not credited'
+  }
+
   const downloadEvidenceReport = async (claim) => {
     try {
       setEvidenceLoading(true)
@@ -305,6 +323,7 @@ export default function MyClaims() {
                 <tr>
                   <th>Flight ID</th>
                   <th>Status</th>
+                  <th>Payment</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -322,6 +341,11 @@ export default function MyClaims() {
                         <span className={`status-badge ${status.class}`}>
                           {status.icon} {status.text}
                         </span>
+                      </td>
+                      <td>
+                        <div className={`payment-pill ${flight.isPaid ? 'paid' : 'unpaid'}`}>
+                          {getPaymentLabel(flight)}
+                        </div>
                       </td>
                       <td>
                         <button
@@ -404,6 +428,14 @@ export default function MyClaims() {
                     <span className="claim-detail-label">Delay</span>
                     <strong>{fmtDelay(selectedClaim.delayMinutes)}</strong>
                   </div>
+                  <div className="claim-detail-item">
+                    <span className="claim-detail-label">Payment</span>
+                    <strong>{getPaymentLabel(selectedClaim)}</strong>
+                  </div>
+                  <div className="claim-detail-item">
+                    <span className="claim-detail-label">Credited At</span>
+                    <strong>{fmtDateTime(selectedClaim.paymentCreditedAt)}</strong>
+                  </div>
                 </div>
 
                 {selectedClaim.claimStatus === 'rejected' && (
@@ -426,14 +458,20 @@ export default function MyClaims() {
                 {selectedClaim.claimStatus === 'accepted' && (
                   <div className="claim-extra-panel success-panel">
                     <h3>Claim Outcome</h3>
-                    <p>This claim has been accepted by the airline.</p>
+                    <p>
+                      This claim has been accepted by the airline.
+                      {selectedClaim.isPaid ? ` €${selectedClaim.paymentAmountEur} has been credited to your Zeph balance.` : ' Payment will appear once the credit is recorded.'}
+                    </p>
                   </div>
                 )}
 
                 {selectedClaim.claimStatus === 'auto_accepted' && (
                   <div className="claim-extra-panel auto-accepted-panel">
                     <h3>Claim Auto-Accepted</h3>
-                    <p>The airline did not respond to this claim within the 7-day review window. Your claim has been automatically accepted.</p>
+                    <p>
+                      The airline did not respond to this claim within the 7-day review window. Your claim has been automatically accepted.
+                      {selectedClaim.isPaid ? ` €${selectedClaim.paymentAmountEur} has been credited to your Zeph balance.` : ' Payment will appear once the credit is recorded.'}
+                    </p>
                   </div>
                 )}
 
@@ -584,6 +622,27 @@ export default function MyClaims() {
 
           .details-button:hover {
             background: rgba(59, 130, 246, 0.18);
+          }
+
+          .payment-pill {
+            display: inline-block;
+            padding: 0.38rem 0.7rem;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            white-space: nowrap;
+          }
+
+          .payment-pill.paid {
+            background: rgba(34, 197, 94, 0.18);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+          }
+
+          .payment-pill.unpaid {
+            background: rgba(148, 163, 184, 0.14);
+            color: var(--text-muted);
+            border: 1px solid rgba(148, 163, 184, 0.2);
           }
 
           .status-badge {

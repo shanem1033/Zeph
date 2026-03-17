@@ -113,6 +113,20 @@ describe('POST /api/bookings', () => {
     expect(data.flightId).toMatch(/BA214/)
   })
 
+  test('returns 400 when selected airline does not match the route flight code', async () => {
+    const sb = mockSupabase()
+    sb.forTable('routes').returnSingle({ flight_code: 'BA214', duration_minutes: 90 })
+
+    const { req, res } = createMocks({
+      method: 'POST',
+      body: { ...validBody, airline: 'Ryanair' },
+    })
+
+    await handler(req, res)
+    expect(res.statusCode).toBe(400)
+    expect(res._getJSONData().error).toMatch(/does not operate/i)
+  })
+
   test('returns 400 for invalid departureDate/time', async () => {
     mockSupabase()
     const { req, res } = createMocks({

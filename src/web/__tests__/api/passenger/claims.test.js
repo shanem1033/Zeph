@@ -75,6 +75,7 @@ describe('POST /api/passenger/claims', () => {
         bookings: { flight_id: 'BA214-2026-02-15-0800', passenger_email: 'a@example.com' },
       },
     ])
+    sb.forTable('claim_payments').returnData([])
 
     const { req, res } = createMocks({
       method: 'POST',
@@ -89,7 +90,20 @@ describe('POST /api/passenger/claims', () => {
     expect(claims[0]).toEqual({
       bookingRef: VALID_UUID_A,
       flightId: 'BA214-2026-02-15-0800',
+      flightCode: null,
+      origin: null,
+      destination: null,
+      scheduledDeparture: null,
+      scheduledArrival: null,
+      actualArrival: null,
+      delayMinutes: null,
       claimStatus: 'registered',
+      isPaid: false,
+      paymentAmountEur: null,
+      paymentCreditedAt: null,
+      paymentSourceStatus: null,
+      rejectionReportUrl: null,
+      rejectionReason: null,
     })
   })
 
@@ -102,6 +116,9 @@ describe('POST /api/passenger/claims', () => {
     sb.forTable('registered_flights').returnData([
       { booking_ref: VALID_UUID_A, claim_status: 'registered', bookings: { flight_id: 'FL-001', passenger_email: 'a@example.com' } },
       { booking_ref: VALID_UUID_B, claim_status: 'accepted', bookings: { flight_id: 'FL-002', passenger_email: 'a@example.com' } },
+    ])
+    sb.forTable('claim_payments').returnData([
+      { booking_ref: VALID_UUID_B, amount_eur: 300, source_status: 'accepted', credited_at: '2026-03-03T10:00:00Z' },
     ])
 
     const { req, res } = createMocks({

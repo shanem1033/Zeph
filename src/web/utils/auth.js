@@ -39,6 +39,33 @@ const DOMAIN_TO_AIRLINE_CODE = {
   'britishairways.com': 'BA',
 }
 
+export const AIRLINE_CODE_TO_NAME = {
+  FR: 'Ryanair',
+  U2: 'EasyJet',
+  LH: 'Lufthansa',
+  AF: 'Air France',
+  IB: 'Iberia',
+  BA: 'British Airways',
+}
+
+const AIRLINE_NAME_TO_CODE = {
+  ryanair: 'FR',
+  easyjet: 'U2',
+  lufthansa: 'LH',
+  'air france': 'AF',
+  iberia: 'IB',
+  'british airways': 'BA',
+}
+
+const AIRLINE_CODE_TO_PREFIXES = {
+  FR: ['FR'],
+  U2: ['U2'],
+  LH: ['LH'],
+  AF: ['AF'],
+  IB: ['IB'],
+  BA: ['BA'],
+}
+
 /**
  * Extracts the airline code from an email address.
  * Returns `null` when the domain is not a known airline.
@@ -49,6 +76,40 @@ export function getAirlineCodeFromEmail(email) {
   if (!email) return null
   const domain = email.split('@')[1]?.toLowerCase()
   return DOMAIN_TO_AIRLINE_CODE[domain] || null
+}
+
+export function getAirlineCodeFromName(name) {
+  if (!name) return null
+  return AIRLINE_NAME_TO_CODE[String(name).trim().toLowerCase()] || null
+}
+
+export function getFlightCodePrefixesForAirlineCode(airlineCode) {
+  if (!airlineCode) return []
+  const normalized = String(airlineCode).trim().toUpperCase()
+  return AIRLINE_CODE_TO_PREFIXES[normalized] || [normalized]
+}
+
+export function flightCodeMatchesAirlineCode(flightCode, airlineCode) {
+  if (!flightCode || !airlineCode) return false
+  const normalizedFlightCode = String(flightCode).trim().toUpperCase()
+  return getFlightCodePrefixesForAirlineCode(airlineCode)
+    .some((prefix) => normalizedFlightCode.startsWith(prefix))
+}
+
+export function getAirlineCodeFromFlightCode(flightCode) {
+  if (!flightCode) return null
+  const normalized = String(flightCode).toUpperCase()
+  for (const [airlineCode, prefixes] of Object.entries(AIRLINE_CODE_TO_PREFIXES)) {
+    if (prefixes.some((prefix) => normalized.startsWith(prefix))) {
+      return airlineCode
+    }
+  }
+  return null
+}
+
+export function getAirlineNameFromCode(code) {
+  if (!code) return null
+  return AIRLINE_CODE_TO_NAME[String(code).toUpperCase()] || null
 }
 
 /**

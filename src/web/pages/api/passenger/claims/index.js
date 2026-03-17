@@ -7,6 +7,16 @@ function isUuid(value) {
   )
 }
 
+function isMissingTableError(error, tableName) {
+  const message = String(error?.message || error?.details || '').toLowerCase()
+  if (!message) return false
+  return (
+    message.includes(`could not find the table 'public.${String(tableName).toLowerCase()}'`) ||
+    message.includes(`relation "public.${String(tableName).toLowerCase()}" does not exist`) ||
+    message.includes(`relation "${String(tableName).toLowerCase()}" does not exist`)
+  )
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST'])
@@ -86,8 +96,9 @@ export default async function handler(req, res) {
 
     const { data: rows, error } = await supabase
       .from('registered_flights')
-      .select('booking_ref, claim_status, bookings!inner(flight_id)')
+      .select('booking_ref, status, claim_status, confirmed_at, bookings!inner(flight_id)')
       .in('booking_ref', allowedRefs)
+      .eq('status', 'confirmed')
       .limit(500)
 
     if (error) throw error
@@ -114,6 +125,22 @@ export default async function handler(req, res) {
       flightMap = Object.fromEntries(
         (Array.isArray(flights) ? flights : []).map((flight) => [flight.flight_id, flight])
       )
+    }
+
+    let paymentMap = {}
+    if (allowedRefs.length > 0) {
+      const { data: payments, error: paymentsError } = await supabase
+        .from('claim_payments')
+        .select('booking_ref, amount_eur, source_status, credited_at')
+        .in('booking_ref', allowedRefs)
+
+      if (paymentsError && !isMissingTableError(paymentsError, 'claim_payments')) throw paymentsError
+
+      if (!isMissingTableError(paymentsError, 'claim_payments')) {
+        paymentMap = Object.fromEntries(
+          (Array.isArray(payments) ? payments : []).map((payment) => [payment.booking_ref, payment])
+        )
+      }
     }
 
     // For rejected claims, look up the rejection report path so passengers
@@ -157,6 +184,8 @@ export default async function handler(req, res) {
       const flightId = r?.bookings?.flight_id || null
       const decision = flightId ? decisionMap[flightId] : null
       const flight = flightId ? flightMap[flightId] : null
+      const payment = paymentMap[r.booking_ref] || null
+      const fallbackPaid = !payment && ['accepted', 'auto_accepted'].includes(r.claim_status)
       return {
         bookingRef: r.booking_ref,
         flightId,
@@ -168,6 +197,10 @@ export default async function handler(req, res) {
         actualArrival: flight?.actual_arrival_at || null,
         delayMinutes: flight?.delay_minutes ?? null,
         claimStatus: r.claim_status || 'registered',
+        isPaid: !!payment || fallbackPaid,
+        paymentAmountEur: payment?.amount_eur ?? (fallbackPaid ? 300 : null),
+        paymentCreditedAt: payment?.credited_at || null,
+        paymentSourceStatus: payment?.source_status || (fallbackPaid ? r.claim_status : null),
         rejectionReportUrl: decision?.rejectionReportUrl || null,
         rejectionReason: decision?.rejectionReason || null,
       }

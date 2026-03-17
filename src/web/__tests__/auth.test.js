@@ -1,4 +1,12 @@
-import { getRoleFromEmail, getAirlineCodeFromEmail, validateCredentials, validateRegistration } from '../utils/auth'
+import {
+    flightCodeMatchesAirlineCode,
+    getAirlineCodeFromEmail,
+    getAirlineCodeFromFlightCode,
+    getAirlineCodeFromName,
+    getRoleFromEmail,
+    validateCredentials,
+    validateRegistration,
+} from '../utils/auth'
 
 describe('getRoleFromEmail', () => {
     test('returns airline for @ryanair.com email', () => {
@@ -75,6 +83,23 @@ describe('getAirlineCodeFromEmail', () => {
     test('returns null for null/undefined', () => {
         expect(getAirlineCodeFromEmail(null)).toBeNull()
         expect(getAirlineCodeFromEmail(undefined)).toBeNull()
+    })
+})
+
+describe('airline flight code aliases', () => {
+    test('maps FR flight codes to Ryanair', () => {
+        expect(getAirlineCodeFromFlightCode('FR340')).toBe('FR')
+        expect(flightCodeMatchesAirlineCode('FR340', 'FR')).toBe(true)
+    })
+
+    test('maps U2 flight codes to EasyJet', () => {
+        expect(getAirlineCodeFromFlightCode('U2118')).toBe('U2')
+        expect(flightCodeMatchesAirlineCode('U2118', 'U2')).toBe(true)
+    })
+
+    test('maps airline display names to canonical codes', () => {
+        expect(getAirlineCodeFromName('Ryanair')).toBe('FR')
+        expect(getAirlineCodeFromName('EasyJet')).toBe('U2')
     })
 })
 
