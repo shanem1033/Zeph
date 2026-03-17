@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '../../../utils/supabaseServer'
+import { flightCodeMatchesAirlineCode, getAirlineCodeFromName } from '../../../utils/auth'
 
 function badRequest(res, message) {
   return res.status(400).json({ ok: false, error: message })
@@ -52,6 +53,11 @@ export default async function handler(req, res) {
 
   if (routeError || !route) {
     return badRequest(res, `No route found for ${departureCity} -> ${arrivalCity}`)
+  }
+
+  const selectedAirlineCode = getAirlineCodeFromName(airline) || (typeof airline === 'string' ? airline.trim().toUpperCase() : null)
+  if (selectedAirlineCode && !flightCodeMatchesAirlineCode(route.flight_code, selectedAirlineCode)) {
+    return badRequest(res, `${airline} does not operate ${departureCity} -> ${arrivalCity} in the current schedule`)
   }
 
   // Calculate arrival time from route duration

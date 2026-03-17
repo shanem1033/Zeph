@@ -79,7 +79,9 @@ class MockSupabase {
           // token may be like 'user-a' or 'user-b' in tests
           const t = String(token)
           let email = 'test@example.com'
-          if (t.includes('user-a') || t === 'user-a') email = 'a@example.com'
+          if (t.includes('airline-fr') || t === 'airline-fr') email = 'ops@ryanair.com'
+          else if (t.includes('airline-ba') || t === 'airline-ba') email = 'ops@britishairways.com'
+          else if (t.includes('user-a') || t === 'user-a') email = 'a@example.com'
           else if (t.includes('user-b') || t === 'user-b') email = 'b@example.com'
           return Promise.resolve({ data: { user: { email } }, error: null })
         }),

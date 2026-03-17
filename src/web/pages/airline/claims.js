@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import AirlineLayout from '../../components/layouts/AirlineLayout'
 import Alert from '../../components/ui/Alert'
 import Input from '../../components/ui/Input'
@@ -46,8 +46,9 @@ function delayLabel(mins) {
 
 /* ── page ── */
 export default function AirlineClaims() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const airlineCode = getAirlineCodeFromEmail(user?.email)
+  const requestIdRef = useRef(0)
 
   const [claims, setClaims] = useState([])
   const [loading, setLoading] = useState(true)
@@ -64,22 +65,30 @@ export default function AirlineClaims() {
   const [uploadProgress, setUploadProgress] = useState('')
 
   const fetchClaims = useCallback(async () => {
+    const requestId = ++requestIdRef.current
     try {
+      if (authLoading) return
       setLoading(true)
       setError('')
-      const params = airlineCode ? `?airlineCode=${airlineCode}` : ''
-      const res = await fetch(`/api/flights/claims${params}`)
+      if (!airlineCode) throw new Error('Could not determine airline account')
+
+      const res = await fetch(`/api/flights/claims?airlineCode=${airlineCode}`, { cache: 'no-store' })
       const json = await res.json()
       if (!json.ok) throw new Error(json.error)
+      if (requestId !== requestIdRef.current) return
       setClaims(json.claims)
     } catch (err) {
+      if (requestId !== requestIdRef.current) return
       setError(err.message)
     } finally {
+      if (requestId !== requestIdRef.current) return
       setLoading(false)
     }
-  }, [airlineCode])
+  }, [airlineCode, authLoading])
 
-  useEffect(() => { fetchClaims() }, [fetchClaims])
+  useEffect(() => {
+    fetchClaims()
+  }, [fetchClaims])
 
   /* On-chain + DB decision for all passengers on a flight */
   async function decide({ flightId, decision }) {
@@ -149,7 +158,6 @@ export default function AirlineClaims() {
       contractAddress = onChain.contractAddress
       decidedByWallet = onChain.decidedByWallet
 
-      console.log('[reject] Calling /api/airline/claims/decide with:', { flightId, decision, evidence, rejectionReportPath, txHash })
       const apiRes = await fetch('/api/airline/claims/decide', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -166,12 +174,15 @@ export default function AirlineClaims() {
       })
 
       const apiData = await apiRes.json().catch(() => null)
-      console.log('[reject] API response:', apiRes.status, apiData)
       if (!apiRes.ok || !apiData?.ok) {
         throw new Error(apiData?.error || 'DB update failed – check console for details')
       }
 
-      setSuccess(`Decision recorded for ${flightId} (${decision}).`)
+      setSuccess(
+        accept
+          ? `Decision recorded for ${flightId}. €300 compensation has been credited to confirmed passenger claims.`
+          : `Decision recorded for ${flightId} (${decision}).`
+      )
       setRejectFlightId('')
       setRejectEvidenceText('')
       setRejectEvidenceUrl('')

@@ -32,9 +32,6 @@ export default function AirlineLayout({ children }) {
           <Link href="/airline/claims" className={`nav-link ${router.pathname === '/airline/claims' ? 'active' : ''}`}>
             Claims
           </Link>
-          <Link href="/airline/flights" className={`nav-link ${router.pathname === '/airline/flights' ? 'active' : ''}`}>
-            Flights
-          </Link>
           <Link href="/airline/profile" className={`nav-link ${router.pathname === '/airline/profile' ? 'active' : ''}`}>
             Profile
           </Link>
