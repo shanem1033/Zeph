@@ -3,7 +3,9 @@ import {
     getAirlineCodeFromEmail,
     getAirlineCodeFromFlightCode,
     getAirlineCodeFromName,
+    getAirlineNameFromCode,
     getRoleFromEmail,
+    isAdminEmail,
     validateCredentials,
     validateRegistration,
 } from '../utils/auth'
@@ -138,5 +140,44 @@ describe('validateRegistration', () => {
     test('returns valid when all inputs are correct', () => {
         const result = validateRegistration('test@test.com', 'password123', 'password123')
         expect(result.valid).toBe(true)
+    })
+})
+
+describe('isAdminEmail', () => {
+    beforeEach(() => {
+        process.env.NEXT_PUBLIC_ADMIN_EMAILS = 'admin@zeph.com, sean@zeph.com'
+    })
+
+    afterEach(() => {
+        delete process.env.NEXT_PUBLIC_ADMIN_EMAILS
+    })
+
+    test('returns true for email in NEXT_PUBLIC_ADMIN_EMAILS', () => {
+        expect(isAdminEmail('admin@zeph.com')).toBe(true)
+    })
+
+    test('handles comma-separated list with spaces', () => {
+        expect(isAdminEmail('sean@zeph.com')).toBe(true)
+    })
+
+    test('returns false for non-admin email', () => {
+        expect(isAdminEmail('passenger@gmail.com')).toBe(false)
+    })
+
+    test('returns false for null/undefined', () => {
+        expect(isAdminEmail(null)).toBe(false)
+        expect(isAdminEmail(undefined)).toBe(false)
+    })
+})
+
+describe('getAirlineNameFromCode', () => {
+    test('returns correct name for known code', () => {
+        expect(getAirlineNameFromCode('FR')).toBe('Ryanair')
+        expect(getAirlineNameFromCode('BA')).toBe('British Airways')
+    })
+
+    test('returns null for unknown code', () => {
+        expect(getAirlineNameFromCode('XX')).toBeNull()
+        expect(getAirlineNameFromCode(null)).toBeNull()
     })
 })
