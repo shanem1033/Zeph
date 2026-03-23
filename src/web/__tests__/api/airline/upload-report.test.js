@@ -147,6 +147,7 @@ describe('POST /api/airline/claims/upload-report', () => {
 
         // Add storage mock to the supabase client
         sb.client.storage = {
+            createBucket: jest.fn().mockResolvedValue({ error: null }),
             from: jest.fn().mockReturnValue({
                 upload: jest.fn().mockResolvedValue({ error: null }),
                 getPublicUrl: jest.fn().mockReturnValue({
@@ -174,6 +175,7 @@ describe('POST /api/airline/claims/upload-report', () => {
         const sb = mockSupabase()
 
         sb.client.storage = {
+            createBucket: jest.fn().mockResolvedValue({ error: null }),
             from: jest.fn().mockReturnValue({
                 upload: jest.fn().mockResolvedValue({ error: { message: 'Storage quota exceeded' } }),
                 getPublicUrl: jest.fn().mockReturnValue({ data: { publicUrl: null } }),
