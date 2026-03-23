@@ -136,6 +136,7 @@ class MockSupabase {
       gte: jest.fn().mockReturnThis(),
       lte: jest.fn().mockReturnThis(),
       in: jest.fn().mockReturnThis(),
+      is: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
       single: jest.fn().mockImplementation(() => {
@@ -156,7 +157,7 @@ class MockSupabase {
 
     // Make every chainable method that should resolve (e.g. after .eq()) also
     // expose a .then so it can be awaited directly.
-    for (const method of ['select', 'insert', 'update', 'upsert', 'delete', 'eq', 'neq', 'in', 'not', 'gte', 'lte', 'order', 'limit']) {
+    for (const method of ['select', 'insert', 'update', 'upsert', 'delete', 'eq', 'neq', 'in', 'is', 'not', 'gte', 'lte', 'order', 'limit']) {
       const orig = builder[method]
       builder[method] = jest.fn((...args) => {
         // record simple filters for later application
