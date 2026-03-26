@@ -1,7 +1,8 @@
 import { getSupabaseAdmin } from '../../../../utils/supabaseServer'
+import { getAirlineCodeFromEmail, flightCodeMatchesAirlineCode } from '../../../../utils/auth'
 import { isUuid, generateEvidenceZip } from '../../../../utils/evidenceReport'
 
-async function getAuthenticatedUserEmail(supabase, req) {
+async function getAuthenticatedAirlineCode(supabase, req) {
   const authHeader = req.headers?.authorization || req.headers?.Authorization
   if (!authHeader || typeof authHeader !== 'string' || !authHeader.toLowerCase().startsWith('bearer ')) {
     throw new Error('Missing Authorization header')
@@ -13,7 +14,12 @@ async function getAuthenticatedUserEmail(supabase, req) {
     throw new Error('Invalid token')
   }
 
-  return userData.user.email
+  const airlineCode = getAirlineCodeFromEmail(userData.user.email)
+  if (!airlineCode) {
+    throw new Error('Not an airline account')
+  }
+
+  return airlineCode
 }
 
 export default async function handler(req, res) {
@@ -36,18 +42,37 @@ export default async function handler(req, res) {
 
   try {
     const supabase = getSupabaseAdmin()
-    const userEmail = await getAuthenticatedUserEmail(supabase, req)
 
-    // Verify the booking belongs to this passenger
+    let airlineCode
+    try {
+      airlineCode = await getAuthenticatedAirlineCode(supabase, req)
+    } catch (authErr) {
+      return res.status(401).json({ ok: false, error: authErr.message })
+    }
+
+    // Verify the booking's flight belongs to this airline
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
-      .select('booking_ref')
+      .select('booking_ref, flight_id')
       .eq('booking_ref', bookingRef)
-      .eq('passenger_email', userEmail)
       .single()
 
     if (bookingError || !booking) {
-      return res.status(404).json({ ok: false, error: 'Claim not found for this passenger' })
+      return res.status(404).json({ ok: false, error: 'Booking not found' })
+    }
+
+    const { data: flight, error: flightError } = await supabase
+      .from('flights')
+      .select('flight_code')
+      .eq('flight_id', booking.flight_id)
+      .single()
+
+    if (flightError || !flight) {
+      return res.status(404).json({ ok: false, error: 'Flight not found' })
+    }
+
+    if (!flightCodeMatchesAirlineCode(flight.flight_code, airlineCode)) {
+      return res.status(403).json({ ok: false, error: 'This booking is not for a flight operated by your airline' })
     }
 
     const { zipBuffer, safeBookingRef } = await generateEvidenceZip(supabase, bookingRef)
@@ -59,7 +84,7 @@ export default async function handler(req, res) {
     if (err.status === 404) {
       return res.status(404).json({ ok: false, error: err.message })
     }
-    console.error('POST /api/passenger/claims/evidence error:', err)
+    console.error('POST /api/airline/claims/evidence error:', err)
     return res.status(500).json({ ok: false, error: err.message || 'Server error' })
   }
 }
