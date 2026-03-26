@@ -46,4 +46,7 @@ export default {
     //   chainId: 11155111,
     // },
   },
+  etherscan: {
+    apiKey: process.env.POLYGONSCAN_API_KEY || "",
+  },
 };
