@@ -15,7 +15,7 @@ test_frontend:
   stage: test
   image: node:22
   before_script:
-    - npm --prefix src/web ci --no-audit --no-fund --legacy-peer-deps
+    - npm --prefix src/web install --no-audit --no-fund --legacy-peer-deps
   script:
     - npm --prefix src/web run test -- --ci
   variables:
