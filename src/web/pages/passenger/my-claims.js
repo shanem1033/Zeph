@@ -21,12 +21,6 @@ export default function MyClaims() {
   const [evidenceLoading, setEvidenceLoading] = useState(false)
 
   async function refreshFromServer(currentFlights) {
-    const refs = (Array.isArray(currentFlights) ? currentFlights : []).map((f) => f?.bookingRef).filter(Boolean)
-
-    // Ensure we include the user's access token so the server can authenticate
-    // and return only this passenger's claims. If `refs` is empty we still
-    // call the server; the API will return all booking refs belonging to
-    // the authenticated user (registrations made on other devices).
     const {
       data: { session },
     } = await supabase.auth.getSession()
@@ -39,7 +33,7 @@ export default function MyClaims() {
     const res = await fetch('/api/passenger/claims', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ bookingRefs: refs }),
+      body: JSON.stringify({ bookingRefs: [] }),
     })
 
     const data = await res.json().catch(() => null)
