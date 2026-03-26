@@ -81,6 +81,9 @@ export default function MyClaims() {
         paymentSourceStatus: c.paymentSourceStatus || null,
         rejectionReportUrl: c.rejectionReportUrl || null,
         rejectionReason: c.rejectionReason || null,
+        txHash: c.txHash || null,
+        oracleTxHash: c.oracleTxHash || null,
+        decisionTxHash: c.decisionTxHash || null,
       }))
 
     const nextFlights = [
@@ -104,6 +107,9 @@ export default function MyClaims() {
           paymentSourceStatus: fresh.paymentSourceStatus || f.paymentSourceStatus || null,
           rejectionReportUrl: fresh.rejectionReportUrl || f.rejectionReportUrl || null,
           rejectionReason: fresh.rejectionReason || f.rejectionReason || null,
+          txHash: fresh.txHash || f.txHash || null,
+          oracleTxHash: fresh.oracleTxHash || f.oracleTxHash || null,
+          decisionTxHash: fresh.decisionTxHash || f.decisionTxHash || null,
         }
       }),
       ...additions,
@@ -436,6 +442,45 @@ export default function MyClaims() {
                     <span className="claim-detail-label">Credited At</span>
                     <strong>{fmtDateTime(selectedClaim.paymentCreditedAt)}</strong>
                   </div>
+                  {selectedClaim.txHash && (
+                    <div className="claim-detail-item" style={{ gridColumn: '1 / -1' }}>
+                      <span className="claim-detail-label">Registration Transaction</span>
+                      <a
+                        href={`https://polygonscan.com/tx/${selectedClaim.txHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="polygonscan-link"
+                      >
+                        {selectedClaim.txHash}
+                      </a>
+                    </div>
+                  )}
+                  {selectedClaim.oracleTxHash && (
+                    <div className="claim-detail-item" style={{ gridColumn: '1 / -1' }}>
+                      <span className="claim-detail-label">Delay Report Transaction</span>
+                      <a
+                        href={`https://polygonscan.com/tx/${selectedClaim.oracleTxHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="polygonscan-link"
+                      >
+                        {selectedClaim.oracleTxHash}
+                      </a>
+                    </div>
+                  )}
+                  {selectedClaim.decisionTxHash && (
+                    <div className="claim-detail-item" style={{ gridColumn: '1 / -1' }}>
+                      <span className="claim-detail-label">Airline Decision Transaction</span>
+                      <a
+                        href={`https://polygonscan.com/tx/${selectedClaim.decisionTxHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="polygonscan-link"
+                      >
+                        {selectedClaim.decisionTxHash}
+                      </a>
+                    </div>
+                  )}
                 </div>
 
                 {selectedClaim.claimStatus === 'rejected' && (
@@ -841,6 +886,18 @@ export default function MyClaims() {
             text-transform: uppercase;
             letter-spacing: 0.08em;
             color: var(--text-muted);
+          }
+
+          .polygonscan-link {
+            color: #60a5fa;
+            text-decoration: none;
+            font-size: 0.9rem;
+            word-break: break-all;
+            font-family: monospace;
+          }
+
+          .polygonscan-link:hover {
+            text-decoration: underline;
           }
 
           .claim-extra-panel {
