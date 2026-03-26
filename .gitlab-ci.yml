@@ -1,11 +1,39 @@
 stages:
   - quality
+  - test
   - build
 
 workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH
+
+# -------------------------
+# Jest — API routes & frontend utilities
+# -------------------------
+test_frontend:
+  stage: test
+  image: node:22
+  before_script:
+    - npm --prefix src/web install --no-audit --no-fund --legacy-peer-deps
+  script:
+    - npm --prefix src/web run test -- --ci
+  variables:
+    NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key
+    NEXT_PUBLIC_CONTRACT_ADDRESS: "0x0000000000000000000000000000000000000000"
+    NEXT_PUBLIC_CHAIN_ID: "137"
+
+# -------------------------
+# Hardhat/Chai — smart contract tests
+# -------------------------
+test_contracts:
+  stage: test
+  image: node:22
+  before_script:
+    - npm ci --no-audit --no-fund --legacy-peer-deps
+  script:
+    - npx hardhat test
 
 # -------------------------
 # Compile Solidity using Node + Hardhat

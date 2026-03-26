@@ -104,6 +104,9 @@ describe('POST /api/passenger/claims', () => {
       paymentSourceStatus: null,
       rejectionReportUrl: null,
       rejectionReason: null,
+      txHash: null,
+      oracleTxHash: null,
+      decisionTxHash: null,
     })
   })
 

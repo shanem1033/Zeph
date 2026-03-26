@@ -95,7 +95,7 @@ export default function Home() {
               <h3 className="feature-title">Register Your Flight</h3>
               <p className="feature-description">
                 Create an account and register your flight before departure.
-                Using your flight details. Simple and quick.
+                Using your booking reference. Simple and quick.
               </p>
             </div>
 
@@ -130,9 +130,6 @@ export default function Home() {
 
         <section className="hero" style={{ marginTop: 'var(--space-3xl)' }}>
           <h2 className="hero-subtitle">Ready to Get Started?</h2>
-          <p className="hero-description">
-            Join thousands of travelers who have streamlined their flight compensation process.
-          </p>
           <div className="hero-actions">
             <Link href="/create-account">
               <button className="btn btn-primary btn-lg">Create Account</button>

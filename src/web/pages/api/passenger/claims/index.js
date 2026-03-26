@@ -96,7 +96,7 @@ export default async function handler(req, res) {
 
     const { data: rows, error } = await supabase
       .from('registered_flights')
-      .select('booking_ref, status, claim_status, confirmed_at, bookings!inner(flight_id)')
+      .select('booking_ref, status, claim_status, confirmed_at, tx_hash, bookings!inner(flight_id)')
       .in('booking_ref', allowedRefs)
       .eq('status', 'confirmed')
       .limit(500)
@@ -116,7 +116,7 @@ export default async function handler(req, res) {
       const { data: flights, error: flightsError } = await supabase
         .from('flights')
         .select(
-          'flight_id, flight_code, origin, destination, scheduled_departure_at, scheduled_arrival_at, actual_arrival_at, delay_minutes'
+          'flight_id, flight_code, origin, destination, scheduled_departure_at, scheduled_arrival_at, actual_arrival_at, delay_minutes, oracle_tx_hash'
         )
         .in('flight_id', flightIds)
 
@@ -143,23 +143,23 @@ export default async function handler(req, res) {
       }
     }
 
-    // For rejected claims, look up the rejection report path so passengers
-    // can download the airline's PDF explanation.
-    const rejectedFlightIds = [
+    // Look up decisions for all decided claims (rejected, accepted, auto_accepted)
+    // to get the on-chain tx hash and, for rejections, the report path.
+    const decidedFlightIds = [
       ...new Set(
         (Array.isArray(rows) ? rows : [])
-          .filter((r) => r.claim_status === 'rejected')
+          .filter((r) => ['rejected', 'accepted', 'auto_accepted'].includes(r.claim_status))
           .map((r) => r?.bookings?.flight_id)
           .filter(Boolean)
       ),
     ]
 
     let decisionMap = {}
-    if (rejectedFlightIds.length > 0) {
+    if (decidedFlightIds.length > 0) {
       const { data: decisions, error: decisionsError } = await supabase
         .from('flight_claim_decisions')
-        .select('flight_id, rejection_report_path, evidence')
-        .in('flight_id', rejectedFlightIds)
+        .select('flight_id, rejection_report_path, evidence, tx_hash')
+        .in('flight_id', decidedFlightIds)
 
       if (!decisionsError && Array.isArray(decisions)) {
         for (const d of decisions) {
@@ -175,6 +175,7 @@ export default async function handler(req, res) {
             rejectionReportPath: d.rejection_report_path || null,
             rejectionReportUrl: reportUrl,
             rejectionReason: d.evidence?.description || null,
+            decisionTxHash: d.tx_hash || null,
           }
         }
       }
@@ -203,6 +204,9 @@ export default async function handler(req, res) {
         paymentSourceStatus: payment?.source_status || (fallbackPaid ? r.claim_status : null),
         rejectionReportUrl: decision?.rejectionReportUrl || null,
         rejectionReason: decision?.rejectionReason || null,
+        txHash: r.tx_hash || null,
+        oracleTxHash: flight?.oracle_tx_hash || null,
+        decisionTxHash: decision?.decisionTxHash || null,
       }
     })
 
