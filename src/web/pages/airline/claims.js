@@ -6,6 +6,7 @@ import Button from '../../components/ui/Button'
 import { airlineDecideFlight } from '../../utils/contract'
 import { useAuth } from '../../context/AuthContext'
 import { getAirlineCodeFromEmail } from '../../utils/auth'
+import { supabase } from '../../utils/supabaseClient'
 
 async function sha256Bytes32Hex(text) {
   const encoder = new TextEncoder()
@@ -56,6 +57,42 @@ export default function AirlineClaims() {
   const [success, setSuccess] = useState('')
   const [deciding, setDeciding] = useState(null) // flightId being decided
   const [filter, setFilter] = useState('all') // all | awaiting | accepted | rejected
+
+  const [evidenceLoading, setEvidenceLoading] = useState(null) // booking_ref being downloaded
+
+  const downloadEvidenceReport = async (bookingRef) => {
+    try {
+      setEvidenceLoading(bookingRef)
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) throw new Error('Not authenticated')
+
+      const res = await fetch('/api/airline/claims/evidence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ bookingRef }),
+      })
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null)
+        throw new Error(errData?.error || 'Failed to generate evidence report')
+      }
+
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `claim-evidence-${bookingRef}.zip`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(err.message || 'Failed to download evidence report')
+    } finally {
+      setEvidenceLoading(null)
+    }
+  }
 
   // Reject evidence state
   const [rejectFlightId, setRejectFlightId] = useState('')
@@ -337,6 +374,7 @@ export default function AirlineClaims() {
                       <th>Passport</th>
                       <th>Registered on Zeph</th>
                       <th>Claim Status</th>
+                      <th>Evidence</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -349,6 +387,17 @@ export default function AirlineClaims() {
                           <td className="mono">{p.passport_number || '—'}</td>
                           <td>{reg ? 'Yes' : 'No'}</td>
                           <td>{reg ? badge(claimStatus) : <span className="text-muted">Not registered</span>}</td>
+                          <td>
+                            {reg ? (
+                              <button
+                                className="evidence-dl-btn"
+                                disabled={evidenceLoading === p.booking_ref}
+                                onClick={() => downloadEvidenceReport(p.booking_ref)}
+                              >
+                                {evidenceLoading === p.booking_ref ? 'Generating…' : 'Download'}
+                              </button>
+                            ) : '—'}
+                          </td>
                         </tr>
                       )
                     })}
@@ -560,6 +609,14 @@ export default function AirlineClaims() {
         .mono { font-family: var(--font-mono); font-size: 0.8rem; }
         .text-muted { color: var(--text-muted); font-size: 0.85rem; }
         .no-passengers { color: var(--text-muted); padding: var(--space-md) var(--space-lg); font-style: italic; }
+        .evidence-dl-btn {
+          padding: 0.25rem 0.65rem; font-size: 0.8rem; font-weight: 500;
+          border: 1px solid var(--primary-color); border-radius: var(--radius-md);
+          background: transparent; color: var(--primary-color); cursor: pointer;
+          transition: all 0.15s;
+        }
+        .evidence-dl-btn:hover:not(:disabled) { background: var(--primary-color); color: #fff; }
+        .evidence-dl-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
         /* ── Badges ── */
         .claim-badge {
