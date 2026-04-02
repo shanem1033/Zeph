@@ -60,6 +60,8 @@ export default function AirlineClaims() {
   const [success, setSuccess] = useState('')
   const [deciding, setDeciding] = useState(null) // flightId being decided
   const [filter, setFilter] = useState('all') // all | awaiting | accepted | rejected
+  const [flightCodeSearch, setFlightCodeSearch] = useState('')
+  const [evidenceLoading, setEvidenceLoading] = useState('')
 
   // Reject evidence state
   const [rejectFlightId, setRejectFlightId] = useState('')
@@ -185,6 +187,48 @@ export default function AirlineClaims() {
       setError(err.message || 'Failed to record decision')
     } finally {
       setDeciding(null)
+    }
+  }
+
+  async function downloadEvidenceReport(bookingRef) {
+    try {
+      setError('')
+      setEvidenceLoading(bookingRef)
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      const token = session?.access_token
+      if (!token) throw new Error('Not authenticated')
+
+      const res = await fetch('/api/airline/claims/evidence', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ bookingRef }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null)
+        throw new Error(errorData?.error || 'Failed to generate evidence report')
+      }
+
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `claim-evidence-${bookingRef}.zip`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(err.message || 'Failed to generate evidence report')
+    } finally {
+      setEvidenceLoading('')
     }
   }
 
