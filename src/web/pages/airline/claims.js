@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import AirlineLayout from '../../components/layouts/AirlineLayout'
 import Alert from '../../components/ui/Alert'
 import Input from '../../components/ui/Input'
@@ -7,6 +7,11 @@ import { airlineDecideFlight } from '../../utils/contract'
 import { useAuth } from '../../context/AuthContext'
 import { getAirlineCodeFromEmail } from '../../utils/auth'
 import { supabase } from '../../utils/supabaseClient'
+import {
+  filterFlightsByFlightCode,
+  formatClaimDateTime,
+  getAutoAcceptDeadlineFromDelayReport,
+} from '../../utils/claimUi'
 
 async function sha256Bytes32Hex(text) {
   const encoder = new TextEncoder()
@@ -22,7 +27,6 @@ function badge(status) {
   const map = {
     awaiting_decision: { label: 'Awaiting Decision', cls: 'badge-warning' },
     accepted: { label: 'Accepted', cls: 'badge-success' },
-    auto_accepted: { label: 'Auto-Accepted', cls: 'badge-auto' },
     rejected: { label: 'Rejected', cls: 'badge-error' },
     registered: { label: 'Registered', cls: 'badge-info' },
     landed_on_time: { label: 'On Time', cls: 'badge-muted' },
@@ -47,9 +51,8 @@ function delayLabel(mins) {
 
 /* ── page ── */
 export default function AirlineClaims() {
-  const { user, loading: authLoading } = useAuth()
+  const { user } = useAuth()
   const airlineCode = getAirlineCodeFromEmail(user?.email)
-  const requestIdRef = useRef(0)
 
   const [claims, setClaims] = useState([])
   const [loading, setLoading] = useState(true)
@@ -57,42 +60,6 @@ export default function AirlineClaims() {
   const [success, setSuccess] = useState('')
   const [deciding, setDeciding] = useState(null) // flightId being decided
   const [filter, setFilter] = useState('all') // all | awaiting | accepted | rejected
-
-  const [evidenceLoading, setEvidenceLoading] = useState(null) // booking_ref being downloaded
-
-  const downloadEvidenceReport = async (bookingRef) => {
-    try {
-      setEvidenceLoading(bookingRef)
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token
-      if (!token) throw new Error('Not authenticated')
-
-      const res = await fetch('/api/airline/claims/evidence', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ bookingRef }),
-      })
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null)
-        throw new Error(errData?.error || 'Failed to generate evidence report')
-      }
-
-      const blob = await res.blob()
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `claim-evidence-${bookingRef}.zip`
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      window.URL.revokeObjectURL(url)
-    } catch (err) {
-      setError(err.message || 'Failed to download evidence report')
-    } finally {
-      setEvidenceLoading(null)
-    }
-  }
 
   // Reject evidence state
   const [rejectFlightId, setRejectFlightId] = useState('')
@@ -102,30 +69,22 @@ export default function AirlineClaims() {
   const [uploadProgress, setUploadProgress] = useState('')
 
   const fetchClaims = useCallback(async () => {
-    const requestId = ++requestIdRef.current
     try {
-      if (authLoading) return
       setLoading(true)
       setError('')
-      if (!airlineCode) throw new Error('Could not determine airline account')
-
-      const res = await fetch(`/api/flights/claims?airlineCode=${airlineCode}`, { cache: 'no-store' })
+      const params = airlineCode ? `?airlineCode=${airlineCode}` : ''
+      const res = await fetch(`/api/flights/claims${params}`)
       const json = await res.json()
       if (!json.ok) throw new Error(json.error)
-      if (requestId !== requestIdRef.current) return
       setClaims(json.claims)
     } catch (err) {
-      if (requestId !== requestIdRef.current) return
       setError(err.message)
     } finally {
-      if (requestId !== requestIdRef.current) return
       setLoading(false)
     }
-  }, [airlineCode, authLoading])
+  }, [airlineCode])
 
-  useEffect(() => {
-    fetchClaims()
-  }, [fetchClaims])
+  useEffect(() => { fetchClaims() }, [fetchClaims])
 
   /* On-chain + DB decision for all passengers on a flight */
   async function decide({ flightId, decision }) {
@@ -176,25 +135,25 @@ export default function AirlineClaims() {
         evidenceHash = await sha256Bytes32Hex(JSON.stringify(evidence))
       }
 
-      // Require the on-chain airline decision to succeed before persisting it in the DB.
+      // 1) Persist decision + evidence in DB first so the dashboard updates immediately
       let txHash = null
-      let chainId = null
-      let contractAddress = null
-      let decidedByWallet = null
+      let chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 31337)
 
-      const CHAIN_TIMEOUT_MS = 60_000 // 60 s – enough for MetaMask interaction
-      const onChain = await Promise.race([
-        airlineDecideFlight({ flightId, accept, evidenceHash }),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('On-chain call timed out after 60 s')), CHAIN_TIMEOUT_MS)
-        ),
-      ])
+      // 2) Attempt on-chain recording with a timeout so it cannot hang forever
+      try {
+        const CHAIN_TIMEOUT_MS = 60_000 // 60 s – enough for MetaMask interaction
+        const onChain = await Promise.race([
+          airlineDecideFlight({ flightId, accept, evidenceHash }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('On-chain call timed out after 60 s')), CHAIN_TIMEOUT_MS)
+          ),
+        ])
+        txHash = onChain.transactionHash
+      } catch (chainErr) {
+        console.warn('On-chain decision skipped/failed (DB will still be updated):', chainErr.message)
+      }
 
-      txHash = onChain.transactionHash
-      chainId = onChain.chainId
-      contractAddress = onChain.contractAddress
-      decidedByWallet = onChain.decidedByWallet
-
+      console.log('[reject] Calling /api/airline/claims/decide with:', { flightId, decision, evidence, rejectionReportPath, txHash })
       const apiRes = await fetch('/api/airline/claims/decide', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -205,21 +164,17 @@ export default function AirlineClaims() {
           rejectionReportPath,
           txHash,
           chainId,
-          contractAddress,
-          decidedByWallet,
+          contractAddress: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || null,
         }),
       })
 
       const apiData = await apiRes.json().catch(() => null)
+      console.log('[reject] API response:', apiRes.status, apiData)
       if (!apiRes.ok || !apiData?.ok) {
         throw new Error(apiData?.error || 'DB update failed – check console for details')
       }
 
-      setSuccess(
-        accept
-          ? `Decision recorded for ${flightId}. €300 compensation has been credited to confirmed passenger claims.`
-          : `Decision recorded for ${flightId} (${decision}).`
-      )
+      setSuccess(`Decision recorded for ${flightId} (${decision}).`)
       setRejectFlightId('')
       setRejectEvidenceText('')
       setRejectEvidenceUrl('')
@@ -240,7 +195,7 @@ export default function AirlineClaims() {
       const passengers = flight.passengers.filter((p) => {
         const cs = p.registration?.claim_status
         if (filter === 'awaiting') return cs === 'awaiting_decision'
-        if (filter === 'accepted') return cs === 'accepted' || cs === 'auto_accepted'
+        if (filter === 'accepted') return cs === 'accepted'
         if (filter === 'rejected') return cs === 'rejected'
         return true
       })
@@ -248,12 +203,17 @@ export default function AirlineClaims() {
     })
     .filter((flight) => filter === 'all' || flight.passengers.length > 0)
 
+  const visibleFlights = useMemo(() => {
+    if (filter !== 'all') return filtered
+    return filterFlightsByFlightCode(filtered, flightCodeSearch)
+  }, [filter, filtered, flightCodeSearch])
+
   /* ── stats ── */
   const allPassengers = claims.flatMap((f) => f.passengers)
   const stats = {
     total: allPassengers.length,
     awaiting: allPassengers.filter((p) => p.registration?.claim_status === 'awaiting_decision').length,
-    accepted: allPassengers.filter((p) => ['accepted', 'auto_accepted'].includes(p.registration?.claim_status)).length,
+    accepted: allPassengers.filter((p) => p.registration?.claim_status === 'accepted').length,
     rejected: allPassengers.filter((p) => p.registration?.claim_status === 'rejected').length,
     delayedFlights: claims.length,
   }
@@ -315,24 +275,40 @@ export default function AirlineClaims() {
           </button>
         </div>
 
+        {filter === 'all' && (
+          <div className="search-panel">
+            <label className="search-label" htmlFor="flight-code-search">Search by flight ID</label>
+            <input
+              id="flight-code-search"
+              type="text"
+              className="search-input"
+              placeholder="e.g. FR340"
+              value={flightCodeSearch}
+              onChange={(e) => setFlightCodeSearch(e.target.value)}
+            />
+          </div>
+        )}
+
         {/* Loading */}
         {loading && <p className="claims-loading">Loading claims…</p>}
 
         {/* Empty state */}
-        {!loading && filtered.length === 0 && (
+        {!loading && visibleFlights.length === 0 && (
           <div className="claims-empty">
             <span className="empty-icon">📋</span>
             <h3>No claims found</h3>
             <p>
-              {filter === 'all'
-                ? 'There are no delayed flights with passengers in the system.'
-                : `No claims with "${filter}" status.`}
+              {filter === 'all' && flightCodeSearch.trim()
+                ? `No flights match the flight ID "${flightCodeSearch.trim()}".`
+                : filter === 'all'
+                  ? 'There are no delayed flights with passengers in the system.'
+                  : `No claims with "${filter}" status.`}
             </p>
           </div>
         )}
 
         {/* Claims list */}
-        {!loading && filtered.map((flight) => (
+        {!loading && visibleFlights.map((flight) => (
           <div key={flight.flight_id} className="flight-claim-card">
             <div className="flight-claim-header">
               <div className="flight-route">
@@ -361,6 +337,15 @@ export default function AirlineClaims() {
                 <span className="time-value highlight">{fmtDate(flight.actual_arrival)}</span>
               </div>
             </div>
+
+            {hasAwaiting(flight) && (
+              <div className="auto-accept-deadline">
+                Auto-accept deadline:{' '}
+                <strong>
+                  {formatClaimDateTime(getAutoAcceptDeadlineFromDelayReport(flight.actual_arrival))}
+                </strong>
+              </div>
+            )}
 
             {/* Passengers */}
             {flight.passengers.length === 0 ? (
@@ -557,6 +542,32 @@ export default function AirlineClaims() {
         }
         .refresh-btn { margin-left: auto; }
 
+        .search-panel {
+          margin-bottom: 1rem;
+        }
+        .search-label {
+          display: block;
+          margin-bottom: 0.4rem;
+          color: var(--text-secondary, #6b7280);
+          font-size: 0.875rem;
+          font-weight: 600;
+        }
+        .search-input {
+          width: 100%;
+          max-width: 420px;
+          padding: 0.7rem 0.9rem;
+          border: 1px solid var(--gray-300, #d1d5db);
+          border-radius: var(--radius-md, 6px);
+          font-size: 0.95rem;
+          background: var(--bg-primary, #fff);
+          color: var(--text-primary);
+        }
+        .search-input:focus {
+          outline: none;
+          border-color: var(--primary-color);
+          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
         /* ── Loading / Empty ── */
         .claims-loading { color: var(--text-muted); text-align: center; padding: 3rem 0; }
         .claims-empty { text-align: center; padding: 3rem 1rem; color: var(--text-muted); }
@@ -594,6 +605,16 @@ export default function AirlineClaims() {
         .time-value { font-size: 0.9rem; }
         .time-value.highlight { color: var(--error-color); font-weight: 600; }
 
+        .auto-accept-deadline {
+          margin: 0 var(--space-lg) var(--space-sm);
+          padding: 0.65rem 0.85rem;
+          border-radius: var(--radius-md);
+          background: var(--warning-bg);
+          color: var(--warning-color);
+          font-size: 0.88rem;
+          border: 1px solid rgba(245, 158, 11, 0.35);
+        }
+
         /* ── Passengers table ── */
         .passengers-table-wrap { overflow-x: auto; padding: var(--space-md) var(--space-lg); }
         .passengers-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
@@ -628,7 +649,6 @@ export default function AirlineClaims() {
         .badge-success { background: var(--success-bg); color: var(--success-color); }
         .badge-error   { background: var(--error-bg);   color: var(--error-color); }
         .badge-info    { background: var(--info-bg);     color: var(--info-color); }
-        .badge-auto    { background: rgba(14, 165, 233, 0.15); color: #0ea5e9; }
         .badge-muted   { background: var(--gray-200);    color: var(--text-muted); }
 
         /* ── Flight-level actions ── */

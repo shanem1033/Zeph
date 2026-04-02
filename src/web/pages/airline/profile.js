@@ -130,7 +130,6 @@ export default function AirlineProfile() {
               <div className="stat-card stat-auto"><span className="stat-value">{airline?.autoAcceptedClaimsCount || 0}</span><span className="stat-label">Auto-Accepted</span></div>
               <div className="stat-card stat-awaiting"><span className="stat-value">{airline?.awaitingClaimsCount || 0}</span><span className="stat-label">Awaiting</span></div>
               <div className="stat-card stat-delayed"><span className="stat-value">{airline?.delayedFlightsCount || 0}</span><span className="stat-label">Delayed Flights</span></div>
-              <div className="stat-card stat-on-time"><span className="stat-value">{airline?.onTimeFlightsCount || 0}</span><span className="stat-label">On-Time Flights</span></div>
             </div>
 
             <div className="history-card">
@@ -271,7 +270,6 @@ export default function AirlineProfile() {
           .stat-auto .stat-value { color: #0284c7; }
           .stat-awaiting .stat-value { color: #d97706; }
           .stat-delayed .stat-value { color: #7c3aed; }
-          .stat-on-time .stat-value { color: #475569; }
           .history-card {
             background: var(--bg-secondary);
             border: 1px solid var(--gray-200);
