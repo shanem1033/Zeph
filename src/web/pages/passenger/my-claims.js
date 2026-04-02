@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react'
 import PassengerLayout from '../../components/layouts/PassengerLayout'
 import Modal from '../../components/modals/Modal'
 import { supabase } from '../../utils/supabaseClient'
+import { formatClaimDateTime, getClaimStatusExplainer } from '../../utils/claimUi'
 
 const STATUS_FILTERS = [
   { key: 'registered', label: 'Registered' },
   { key: 'awaiting_decision', label: 'Awaiting Decision' },
   { key: 'accepted', label: 'Accepted' },
+  { key: 'auto_accepted', label: 'Auto-Accepted' },
   { key: 'rejected', label: 'Rejected' },
 ]
 
@@ -200,16 +202,7 @@ export default function MyClaims() {
   }
 
   const fmtDateTime = (value) => {
-    if (!value) return 'Not available'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return 'Not available'
-    return date.toLocaleString('en-IE', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
+    return formatClaimDateTime(value)
   }
 
   const fmtDelay = (minutes) => {
@@ -338,9 +331,12 @@ export default function MyClaims() {
                         </div>
                       </td>
                       <td>
-                        <span className={`status-badge ${status.class}`}>
-                          {status.icon} {status.text}
-                        </span>
+                        <div className="status-cell">
+                          <span className={`status-badge ${status.class}`}>
+                            {status.icon} {status.text}
+                          </span>
+                          <p className="status-explainer">{getClaimStatusExplainer(flight.claimStatus)}</p>
+                        </div>
                       </td>
                       <td>
                         <div className={`payment-pill ${flight.isPaid ? 'paid' : 'unpaid'}`}>
@@ -431,6 +427,10 @@ export default function MyClaims() {
                   <div className="claim-detail-item">
                     <span className="claim-detail-label">Payment</span>
                     <strong>{getPaymentLabel(selectedClaim)}</strong>
+                  </div>
+                  <div className="claim-detail-item" style={{ gridColumn: '1 / -1' }}>
+                    <span className="claim-detail-label">Status Meaning</span>
+                    <strong>{getClaimStatusExplainer(selectedClaim.claimStatus)}</strong>
                   </div>
                   <div className="claim-detail-item">
                     <span className="claim-detail-label">Credited At</span>
@@ -727,6 +727,20 @@ export default function MyClaims() {
             background: rgba(14, 165, 233, 0.2);
             color: #0ea5e9;
             border: 1px solid #0ea5e9;
+          }
+
+          .status-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+          }
+
+          .status-explainer {
+            margin: 0;
+            font-size: 0.8rem;
+            line-height: 1.35;
+            color: var(--text-muted);
+            max-width: 320px;
           }
 
           .flights-table {
