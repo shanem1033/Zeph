@@ -5,6 +5,7 @@ import Button from '../../components/ui/Button'
 import Alert from '../../components/ui/Alert'
 import Card from '../../components/ui/Card'
 import { registerFlight as registerFlightOnChain } from '../../utils/contract'
+import { fetchWithRetry } from '../../utils/fetchWithRetry'
 
 export default function RegisterFlight() {
   const [bookingRef, setBookingRef] = useState('')
@@ -49,21 +50,23 @@ export default function RegisterFlight() {
       const result = await registerFlightOnChain(flightId)
       setTxHash(result.transactionHash)
 
-      // 3) Mark registration confirmed in DB
-      const completeRes = await fetch('/api/registration/complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bookingRef,
-          txHash: result.transactionHash,
-          chainId: Number(process.env.NEXT_PUBLIC_CHAIN_ID || 31337),
-          contractAddress: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || null,
-        }),
-      })
-
-      const completeData = await completeRes.json().catch(() => null)
-      if (!completeRes.ok || !completeData?.ok) {
-        throw new Error(completeData?.error || 'Flight registered on-chain, but failed to update database')
+      // 3) Mark registration confirmed in DB — retry up to 3 times to guard against
+      // transient Supabase errors after the on-chain tx has already mined.
+      try {
+        await fetchWithRetry('/api/registration/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bookingRef,
+            txHash: result.transactionHash,
+            chainId: Number(process.env.NEXT_PUBLIC_CHAIN_ID || 31337),
+            contractAddress: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || null,
+          }),
+        })
+      } catch {
+        throw new Error(
+          `Flight registered on-chain (tx: ${result.transactionHash}) but the database could not be updated. Please save your transaction hash and contact support.`
+        )
       }
 
       // Save to localStorage for My Claims page (temporary until DB-backed user/claims exists)
