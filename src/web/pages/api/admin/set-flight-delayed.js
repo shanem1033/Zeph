@@ -1,10 +1,5 @@
 import { getSupabaseAdmin } from '../../../utils/supabaseServer'
-
-
-
-function badRequest(res, message) {
-  return res.status(400).json({ ok: false, error: message })
-}
+import { badRequest } from '../../../utils/apiHelpers'
 
 export default async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') {
