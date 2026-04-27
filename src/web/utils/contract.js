@@ -25,8 +25,6 @@ async function ensureCorrectNetwork(provider) {
   const expectedChainId = getExpectedChainId()
   const network = await provider.getNetwork()
 
-  console.log(`Current chain ID: ${network.chainId}, Expected: ${expectedChainId}`)
-
   if (network.chainId === expectedChainId) return
 
   if (typeof window === 'undefined' || typeof window.ethereum === 'undefined') {
@@ -98,14 +96,9 @@ export async function getProvider() {
     throw new Error('MetaMask is not installed. Please install MetaMask to continue.')
   }
 
-  console.log('MetaMask chainId before creating provider:', window.ethereum.chainId)
-
   // Pass 'any' so ethers v5 doesn't throw NETWORK_ERROR when MetaMask switches chains.
   const provider = new ethers.providers.Web3Provider(window.ethereum, 'any')
   await provider.send("eth_requestAccounts", [])
-
-  const network = await provider.getNetwork()
-  console.log('Provider detected network:', network.chainId, network.name)
 
   return provider
 }
@@ -217,36 +210,29 @@ export async function airlineDecideFlight({ flightId, accept, evidenceHash }) {
     // Auto-grant AIRLINE_ROLE via the server-side admin key so the airline
     // operator never has to run a manual CLI command.
     if (!hasAirlineRole) {
-      console.log('[contract] Wallet missing AIRLINE_ROLE – requesting auto-grant…')
-      console.log('[contract] contract address:', contract.address)
-      console.log('[contract] caller:', walletAddress)
       const grantRes = await fetch('/api/airline/grant-role', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address: walletAddress }),
       })
       const grantData = await grantRes.json().catch(() => null)
-      console.log('[contract] grant-role API response:', grantData)
       if (!grantRes.ok || !grantData?.ok) {
         throw new Error(
           grantData?.error ||
           `Your connected wallet (${walletAddress}) does not have AIRLINE_ROLE and auto-grant failed.`
         )
       }
-      console.log('[contract] AIRLINE_ROLE granted successfully, proceeding with transaction.')
     }
 
     // Ensure the oracle delay is recorded on-chain for this flight.
     // After a contract redeploy the DB may show the flight as delayed but the
     // new contract instance won't have the flightDelayed flag yet.
-    console.log('[contract] Ensuring flight delay is on-chain for', flightId)
     const ensureRes = await fetch('/api/airline/ensure-delay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ flightId }),
     })
     const ensureData = await ensureRes.json().catch(() => null)
-    console.log('[contract] ensure-delay API response:', ensureData)
     if (!ensureRes.ok || !ensureData?.ok) {
       throw new Error(
         ensureData?.error ||

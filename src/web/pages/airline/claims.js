@@ -151,11 +151,11 @@ export default function AirlineClaims() {
           ),
         ])
         txHash = onChain.transactionHash
-      } catch (chainErr) {
-        console.warn('On-chain decision skipped/failed (DB will still be updated):', chainErr.message)
+      } catch {
+        // on-chain call failed; DB update proceeds below
       }
 
-      console.log('[reject] Calling /api/airline/claims/decide with:', { flightId, decision, evidence, rejectionReportPath, txHash })
+
       const apiRes = await fetch('/api/airline/claims/decide', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -171,7 +171,6 @@ export default function AirlineClaims() {
       })
 
       const apiData = await apiRes.json().catch(() => null)
-      console.log('[reject] API response:', apiRes.status, apiData)
       if (!apiRes.ok || !apiData?.ok) {
         throw new Error(apiData?.error || 'DB update failed – check console for details')
       }
