@@ -48,7 +48,6 @@ compile_solidity:
       - package.json
       - package-lock.json
       - hardhat.config.js
-      - hardhat.config.mjs
       when: on_success
     - when: never
   before_script:
