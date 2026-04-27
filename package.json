@@ -1,14 +1,14 @@
 {
   "name": "2026-csc1097-sweens-47-mahons-25",
   "version": "1.0.0",
-  "description": "This is a template for CA400 projects.",
+  "description": "Zeph — decentralised flight delay compensation platform on Polygon",
   "main": "index.js",
   "type": "module",
   "directories": {
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npx hardhat test",
     "deploy:polygon": "hardhat run src/scripts/deploy.js --network polygon",
     "grant:airline": "hardhat run src/scripts/grant-airline-role.js --network polygon",
     "oracle:report": "hardhat run src/scripts/oracle-report-delay.js --network polygon",

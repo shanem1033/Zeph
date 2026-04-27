@@ -1,8 +1,5 @@
 import { getSupabaseAdmin } from '../../../utils/supabaseServer'
-
-function isUuid(value) {
-  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
-}
+import { isUuid } from '../../../utils/apiHelpers'
 
 function isTxHash(value) {
   return typeof value === 'string' && /^0x([A-Fa-f0-9]{64})$/.test(value)

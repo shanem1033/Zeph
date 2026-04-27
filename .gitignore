@@ -30,3 +30,6 @@ src/web/contracts/
 # Supabase CLI temp files (created during db push/link)
 /.deps/
 /supabase/
+
+# AI context files (local only)
+CLAUDE.md

@@ -71,7 +71,6 @@ export default async function handler(req, res) {
     const alreadyDelayed = await contract.flightDelayed(key)
 
     if (alreadyDelayed) {
-      console.log(`[ensure-delay] ${flightId} already marked delayed on-chain`)
       return res.status(200).json({ ok: true, alreadyDelayed: true })
     }
 
@@ -95,10 +94,8 @@ export default async function handler(req, res) {
       })
     }
 
-    console.log(`[ensure-delay] Reporting delay for ${flightId} (${delayMinutes} min) on-chain…`)
     const tx = await contract.oracleReportDelay(flightId, delayMinutes, txOverrides)
     const receipt = await tx.wait()
-    console.log(`[ensure-delay] oracleReportDelay tx mined: ${receipt.transactionHash}`)
 
     // Also update the DB so the oracle worker doesn't re-process it
     await supabase

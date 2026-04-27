@@ -63,16 +63,11 @@ export default async function handler(req, res) {
     const admin = new ethers.Wallet(adminKey, provider)
     const txOverrides = await getTransactionOverrides(provider)
 
-    console.log('[grant-role] admin address:', admin.address)
-    console.log('[grant-role] contract address:', contractAddress)
-    console.log('[grant-role] target address:', address)
-
     const contract = new ethers.Contract(contractAddress, Compensation.abi, admin)
 
     // Verify the admin wallet actually holds DEFAULT_ADMIN_ROLE
     const defaultAdminRole = await contract.DEFAULT_ADMIN_ROLE()
     const adminHasRole = await contract.hasRole(defaultAdminRole, admin.address)
-    console.log('[grant-role] admin has DEFAULT_ADMIN_ROLE:', adminHasRole)
     if (!adminHasRole) {
       return res.status(500).json({
         ok: false,
@@ -82,7 +77,6 @@ export default async function handler(req, res) {
 
     const airlineRole = await contract.AIRLINE_ROLE()
     const alreadyHasRole = await contract.hasRole(airlineRole, address)
-    console.log('[grant-role] target already has AIRLINE_ROLE:', alreadyHasRole)
 
     if (alreadyHasRole) {
       return res.status(200).json({ ok: true, alreadyGranted: true })
@@ -90,11 +84,9 @@ export default async function handler(req, res) {
 
     const tx = await contract.grantRole(airlineRole, address, txOverrides)
     const receipt = await tx.wait()
-    console.log('[grant-role] grantRole tx mined:', receipt.transactionHash)
 
     // Verify the grant actually took effect
     const hasRoleNow = await contract.hasRole(airlineRole, address)
-    console.log('[grant-role] target has AIRLINE_ROLE after grant:', hasRoleNow)
     if (!hasRoleNow) {
       return res.status(500).json({ ok: false, error: 'grantRole tx succeeded but hasRole still returns false' })
     }
