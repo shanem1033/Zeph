@@ -1,30 +1,43 @@
-# CA400 template repo
+# Zeph — Blockchain Flight Compensation Platform
 
-This is a template for CA400 projects.
+A decentralised EU flight-delay compensation system. Passengers register flights on-chain, an oracle monitors delays, and airlines accept or reject claims — all enforced by a Solidity smart contract on Polygon. Compensation is paid automatically if an airline fails to respond within 7 days.
 
-## 1. Create your repo
+Final-year university project — CSC1097, DCU, 2025/26.
 
-One person from your project team should fork this repo, then add other teammates as project members on GitLab.
+## Team
 
-## 2. Name your repo appropriately
+| Name | Student ID |
+|---|---|
+| Shane Mahon | 22376743 |
+| Sean Sweeney | 22408204 |
 
-The name of your project must be of the form `2024-ca400-XXXXXXX`, where "`XXXXXXX`"
-should be replaced with your usernames (e.g. `2024-ca400-sblott-pclarke`).
-**Note** that the year should be set as appropriate to your year of study. For example, in the
-2022/2023 academic year this would change to '2023-ca400-sblott-pclarke'), 
-in the 2023/2024 academic year this would change to '2024-ca400-sblott-pclarke'), etc. 
+## Tech Stack
 
-It is the *name of your repo* which matters (not the name of your project).
+| Layer | Technology |
+|---|---|
+| Smart Contract | Solidity 0.8.20, Hardhat, Ethers.js v5 |
+| Blockchain | Polygon (local Hardhat node for development) |
+| Frontend | Next.js 13, React 18 |
+| Database | Supabase (PostgreSQL) |
+| Auth | Supabase Auth (JWT) |
+| Oracle | Custom Node.js worker |
+| Testing | Jest (frontend/API), Chai + Hardhat (contracts) |
 
-You can change the name of your repo on GitLab under:
+## Architecture
 
-- Settings / General / Advanced / Change path
+- **Passengers** register flights and track claims via the web app
+- **Oracle** polls flight data every 60 seconds and reports delays ≥ 180 minutes on-chain
+- **Airlines** accept or reject claims; evidence hashes are stored on-chain for rejected claims
+- **7-day auto-accept**: claims are automatically approved if the airline does not respond in time
 
-It looks like this:
 
-![change-repo-path](./res/repo-change-path.png "Change repo path.")
+For setup, deployment, and testing instructions see [User Manual](docs/documentation/)
 
-You should replace all of this file with a README describing your own project.
 
-## Additional resources
+## Documentation
 
+- [Functional Specification](docs/functional-spec/)
+- [Technical Guide](docs/documentation/)
+- [User Manual](docs/documentation/)
+- [Ethics Review](docs/ethics.pdf)
+- [Video Walkthrough](docs/video-walk-through/)
