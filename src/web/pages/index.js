@@ -10,9 +10,7 @@ export default function Home() {
           <h1 className="hero-title">Welcome to Zeph</h1>
           <h2 className="hero-subtitle">Blockchain-Powered Flight Compensation</h2>
           <p className="hero-description">
-            Experience a revolutionary approach to flight delay compensation.
-            Transparent, automated, and fair.
-            Powered by blockchain technology.
+            Book your flight, then log in and register it with Zeph using your booking reference.
           </p>
           <div className="hero-actions">
             <Link href="/create-account">
@@ -44,7 +42,7 @@ export default function Home() {
               <div className="feature-icon">🔒</div>
               <h3 className="feature-title">Blockchain Security</h3>
               <p className="feature-description">
-                Your funds are protected by Ethereum smart contracts. Transparent,
+                Your claims are protected by Ethereum smart contracts. Transparent,
                 immutable, and secure.
               </p>
             </div>

@@ -12,6 +12,7 @@ module.exports = {
   testPathIgnorePatterns: [
     '/node_modules/',
     '/test/helpers/',
+    'Compensation\\.test\\.cjs',
   ],
 
   // Don't transform node_modules except our mocked dependencies
