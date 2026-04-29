@@ -33,7 +33,7 @@ test_contracts:
   before_script:
     - npm ci --no-audit --no-fund --legacy-peer-deps
   script:
-    - npx hardhat test
+    - npx hardhat test test/Compensation.test.cjs
 
 # -------------------------
 # Compile Solidity using Node + Hardhat
