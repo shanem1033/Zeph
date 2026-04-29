@@ -5,9 +5,9 @@
  */
 import { createMocks, mockSupabase, resetSupabaseMock } from '../../helpers/setup'
 
-jest.mock('../../../utils/supabaseServer')
+jest.mock('../../../src/web/utils/supabaseServer')
 
-import handler from '../../../pages/api/bookings/index'
+import handler from '../../../src/web/pages/api/bookings/index'
 
 afterEach(() => resetSupabaseMock())
 

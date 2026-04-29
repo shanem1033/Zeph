@@ -6,7 +6,7 @@
  * module).  We re-export `getActiveMock` from the test helpers so every
  * handler call uses the mock that was configured via `mockSupabase()`.
  */
-import { getActiveMock } from '../../__tests__/helpers/setup'
+import { getActiveMock } from '../../../../test/helpers/setup'
 
 export function getSupabaseAdmin() {
   return getActiveMock()

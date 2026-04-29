@@ -1,10 +1,10 @@
 import { createMocks, mockSupabase, resetSupabaseMock } from '../../helpers/setup'
 
-jest.mock('../../../utils/supabaseServer')
-jest.mock('../../../utils/airlineClaims')
+jest.mock('../../../src/web/utils/supabaseServer')
+jest.mock('../../../src/web/utils/airlineClaims')
 
-import handler from '../../../pages/api/flights/claims'
-import { fetchAirlineClaimFlights } from '../../../utils/airlineClaims'
+import handler from '../../../src/web/pages/api/flights/claims'
+import { fetchAirlineClaimFlights } from '../../../src/web/utils/airlineClaims'
 
 afterEach(() => {
   resetSupabaseMock()

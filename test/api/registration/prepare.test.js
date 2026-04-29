@@ -6,9 +6,9 @@
  */
 import { createMocks, mockSupabase, resetSupabaseMock } from '../../helpers/setup'
 
-jest.mock('../../../utils/supabaseServer')
+jest.mock('../../../src/web/utils/supabaseServer')
 
-import handler from '../../../pages/api/registration/prepare'
+import handler from '../../../src/web/pages/api/registration/prepare'
 
 const VALID_UUID = '11111111-1111-1111-9111-111111111111'
 

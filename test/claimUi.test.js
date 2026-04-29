@@ -3,7 +3,7 @@ import {
     formatClaimDateTime,
     getAutoAcceptDeadlineFromDelayReport,
     getClaimStatusExplainer,
-} from '../utils/claimUi'
+} from '../src/web/utils/claimUi'
 
 describe('claim UI helpers', () => {
     it('returns explainer text for known status values', () => {

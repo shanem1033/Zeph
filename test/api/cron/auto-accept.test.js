@@ -6,11 +6,11 @@
  */
 import { createMocks, mockSupabase, resetSupabaseMock } from '../../helpers/setup'
 
-jest.mock('../../../utils/supabaseServer')
+jest.mock('../../../src/web/utils/supabaseServer')
 
 process.env.ADMIN_SECRET = 'test-cron-secret'
 
-import handler from '../../../pages/api/cron/auto-accept'
+import handler from '../../../src/web/pages/api/cron/auto-accept'
 
 afterEach(() => resetSupabaseMock())
 

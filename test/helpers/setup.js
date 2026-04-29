@@ -210,7 +210,7 @@ class MockSupabase {
   }
 }
 
-// ─ createMocks wrapper 
+// ─ createMocks wrapper
 
 /**
  * Thin wrapper around `node-mocks-http` createMocks configured for JSON APIs.

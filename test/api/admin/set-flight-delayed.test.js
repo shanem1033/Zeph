@@ -1,8 +1,8 @@
 import { createMocks, mockSupabase, resetSupabaseMock } from '../../helpers/setup'
 
-jest.mock('../../../utils/supabaseServer')
+jest.mock('../../../src/web/utils/supabaseServer')
 
-import handler from '../../../pages/api/admin/set-flight-delayed'
+import handler from '../../../src/web/pages/api/admin/set-flight-delayed'
 
 const ADMIN_SECRET = 'test-admin-secret'
 

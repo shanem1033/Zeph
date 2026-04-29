@@ -1,4 +1,4 @@
-import { fetchWithRetry } from '../utils/fetchWithRetry'
+import { fetchWithRetry } from '../src/web/utils/fetchWithRetry'
 
 const mockOk = (data) => ({ ok: true, json: async () => data })
 const mockFail = (error) => ({ ok: false, json: async () => ({ ok: false, error }) })

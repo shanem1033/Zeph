@@ -8,7 +8,7 @@ import {
     isAdminEmail,
     validateCredentials,
     validateRegistration,
-} from '../utils/auth'
+} from '../src/web/utils/auth'
 
 describe('getRoleFromEmail', () => {
     test('returns airline for @ryanair.com email', () => {

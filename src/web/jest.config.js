@@ -5,12 +5,18 @@ module.exports = {
     '^.+\\.(js|jsx)$': 'babel-jest',
   },
 
+  // Look for tests in the root test/ folder
+  roots: ['<rootDir>/../../test'],
+
   // Don't treat helper files as tests
   testPathIgnorePatterns: [
     '/node_modules/',
-    '/__tests__/helpers/',
+    '/test/helpers/',
   ],
 
   // Don't transform node_modules except our mocked dependencies
   transformIgnorePatterns: ['/node_modules/'],
+
+  // Ensure node_modules from src/web are resolved for tests outside src/web
+  modulePaths: ['<rootDir>/node_modules'],
 }
