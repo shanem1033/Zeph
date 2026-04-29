@@ -12,7 +12,7 @@ const STATUS_FILTERS = [
   { key: 'rejected', label: 'Rejected' },
 ]
 
-const DEFAULT_FILTER = 'default'
+const DEFAULT_FILTER = 'all'
 
 export default function MyClaims() {
   const [flights, setFlights] = useState([])

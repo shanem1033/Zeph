@@ -101,7 +101,6 @@ export default function AdminFlightControl() {
                         <div className="admin-icon">✈</div>
                         <div>
                             <h1>Flight Control</h1>
-                            <p className="admin-subtitle">Mark active flights as landed / delayed</p>
                         </div>
                     </div>
                     <button className="refresh-btn" onClick={fetchFlights} disabled={loading}>
@@ -115,8 +114,7 @@ export default function AdminFlightControl() {
                 {/* Info banner */}
                 <div className="info-banner">
                     <span className="info-icon">ℹ</span>
-                    Flights listed here have not yet landed. Enter the actual arrival time and click <strong>Mark Landed</strong>.
-                    Arrivals ≥ 180 min late will automatically move registered passenger claims to <em>Awaiting Decision</em>.
+                    Click the calendar icon to set the actual arrival time of a flight, then click Mark Landed.
                 </div>
 
                 <div className="search-panel">
@@ -369,6 +367,10 @@ export default function AdminFlightControl() {
           outline: none;
           border-color: #e94560;
           box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.15);
+        }
+        .delay-input::-webkit-calendar-picker-indicator {
+          filter: invert(1);
+          cursor: pointer;
         }
 
         /* Mark button */

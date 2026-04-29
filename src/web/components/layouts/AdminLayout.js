@@ -26,9 +26,6 @@ export default function AdminLayout({ children }) {
                     Zeph <span className="admin-badge">Admin</span>
                 </Link>
                 <div className="nav-links">
-                    <Link href="/admin" className={`nav-link ${router.pathname === '/admin' ? 'active' : ''}`}>
-                        Flight Control
-                    </Link>
                 </div>
                 <div className="nav-user">
                     <span className="nav-username">{user.email?.split('@')[0]}</span>

@@ -38,6 +38,9 @@ export default function PassengerLayout({ children }) {
           <Link href="/passenger/profile" className={`nav-link ${router.pathname === '/passenger/profile' ? 'active' : ''}`}>
             Profile
           </Link>
+          <Link href="/help" className={`nav-link ${router.pathname === '/help' ? 'active' : ''}`}>
+            Help
+          </Link>
         </div>
         <div className="nav-user">
           <span className="nav-username">Welcome, {user.email?.split('@')[0]}</span>
