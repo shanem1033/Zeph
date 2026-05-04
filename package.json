@@ -8,7 +8,7 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "npx hardhat test",
+    "test": "npx hardhat test test/Compensation.test.cjs",
     "deploy:polygon": "hardhat run src/scripts/deploy.js --network polygon",
     "grant:airline": "hardhat run src/scripts/grant-airline-role.js --network polygon",
     "oracle:report": "hardhat run src/scripts/oracle-report-delay.js --network polygon",
