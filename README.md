@@ -2,7 +2,7 @@
 
 A decentralised EU flight-delay compensation system. Passengers register flights on-chain, an oracle monitors delays, and airlines accept or reject claims. Enforced by a Solidity smart contract on Polygon. Compensation is paid automatically if an airline fails to respond within 7 days.
 
-Final-year university project — CSC1097, DCU, 2025/26.
+Final-year university project. CSC1097, DCU, 2025/26.
 
 ## Team
 
