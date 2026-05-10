@@ -1,6 +1,6 @@
-# Zeph — Blockchain Flight Compensation Platform
+# Zeph - Blockchain Flight Compensation Platform
 
-A decentralised EU flight-delay compensation system. Passengers register flights on-chain, an oracle monitors delays, and airlines accept or reject claims — all enforced by a Solidity smart contract on Polygon. Compensation is paid automatically if an airline fails to respond within 7 days.
+A decentralised EU flight-delay compensation system. Passengers register flights on-chain, an oracle monitors delays, and airlines accept or reject claims. Enforced by a Solidity smart contract on Polygon. Compensation is paid automatically if an airline fails to respond within 7 days.
 
 Final-year university project — CSC1097, DCU, 2025/26.
 
